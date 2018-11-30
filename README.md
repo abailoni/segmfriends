@@ -1,1 +1,1 @@
-# friendly-segm-tools
+# Friendly segmentation tools
