@@ -128,6 +128,7 @@ class FeaturerLongRangeAffs(object):
                 out_dict['not_merge_prio'] = 1 - edge_indicators
                 out_dict['edge_sizes'] = edge_sizes
             elif self.statistic == 'max':
+                # DEPRECATED
                 merge_prio, edge_sizes = \
                     accumulate_affinities_on_graph_edges(
                         affinities, offsets,

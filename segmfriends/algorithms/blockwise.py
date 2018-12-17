@@ -70,7 +70,7 @@ class BlockWise(object):
             # At the moment the final agglomeration is a usual  HC with 0.5 threshold:
             # if final_agglomerater is None:
             #     raise DeprecationWarning()
-            #     self.final_agglomerater = FixationAgglomeraterFromSuperpixels(
+            #     self.final_agglomerater = GreedyEdgeContractionAgglomeraterFromSuperpixels(
             #         offsets,
             #         max_distance_lifted_edges=2,
             #         update_rule_merge='mean',
