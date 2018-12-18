@@ -166,26 +166,21 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
         else:
             signed_weights = edge_indicators - 0.5
 
-        cluster_policy = nagglo.greedyGraphEdgeContraction(graph, signed_weights,
-                                                           edge_sizes=edge_sizes,
-                                                           # node_sizes=node_sizes,
-                                                           is_merge_edge=is_local_edge,
-                                                           **self.extra_aggl_kwargs
-                                                           )
-
-        # Run agglomerative clustering:
-        agglomerativeClustering = nagglo.agglomerativeClustering(cluster_policy)
-
         if self.debug:
             print("Took {} s!".format(time.time() - tick))
             print("Running clustering...")
-            tick = time.time()
 
-        agglomerativeClustering.run(**self.extra_runAggl_kwargs) # (True, 10000)
-        node_labels = agglomerativeClustering.result()
+        node_labels, runtime = \
+            runGreedyGraphEdgeContraction(graph, signed_weights,
+                                          edge_sizes=edge_sizes,
+                                          # node_sizes=node_sizes,
+                                          is_merge_edge=is_local_edge,
+                                          return_UCM=False,
+                                          **self.extra_aggl_kwargs,
+                                          **self.extra_runAggl_kwargs)
 
         if self.debug:
-            print("Took {} s!".format(time.time() - tick))
+            print("Took {} s!".format(runtime))
             print("Getting final segm...")
 
         final_segm = mappings.map_features_to_label_array(
@@ -277,35 +272,76 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
             # negative_weights = (edge_weights - 1.) * np.logical_not(is_local_edge)
             # signed_weights = positive_weights + negative_weights
 
-        cluster_policy = nagglo.greedyGraphEdgeContraction(graph, signed_weights,
+        nodeSeg, runtime, UCMap, mergeTimes = \
+            runGreedyGraphEdgeContraction(graph, signed_weights,
                                           edge_sizes=edge_sizes,
                                           is_merge_edge=is_local_edge,
-                                          **self.extra_aggl_kwargs
-                                          )
+                                         return_UCM=True,
+                                          **self.extra_aggl_kwargs)
 
-        # Run agglomerative clustering:
-        agglomerativeClustering = nagglo.agglomerativeClustering(cluster_policy)
-        # agglomerativeClustering.run(**self.extra_runAggl_kwargs)
-        outputs = agglomerativeClustering.runAndGetMergeTimesAndDendrogramHeight(verbose=False)
-        mergeTimes, UCMap = outputs
 
         edge_IDs = graph.mapEdgesIDToImage()
+
         # Take only local:
         edge_IDs = edge_IDs
 
         final_UCM = np.squeeze(
             mappings.map_features_to_label_array(edge_IDs, np.expand_dims(mergeTimes, axis=-1)))
 
-        nodeSeg = agglomerativeClustering.result()
-
-
         edge_labels = graph.nodesLabelsToEdgeLabels(nodeSeg)
         MC_energy = (log_costs * edge_labels).sum()
         print("MC energy: {}".format(MC_energy))
+        print("Agglomerated in {} s".format(runtime))
 
         segmentation = nodeSeg.reshape(image_shape)
 
         return segmentation, final_UCM
+
+
+def runGreedyGraphEdgeContraction(
+                          graph,
+                          signed_edge_weights,
+                          update_rule = 'mean',
+                          threshold = 0.5,
+                          add_cannot_link_constraints= False,
+                          edge_sizes = None,
+                          node_sizes = None,
+                          is_merge_edge = None,
+                          size_regularizer = 0.0,
+                          return_UCM = False,
+                          **run_kwargs):
+    """
+    Returns node_labels and runtime. If return_UCM == True, then also returns the UCM and the merging iteration for
+    every edge.
+    """
+    cluster_policy = nagglo.greedyGraphEdgeContraction(graph, signed_edge_weights,
+                                                           edge_sizes=edge_sizes,
+                                                           update_rule=update_rule,
+                                                           threshold=threshold,
+                                                           add_cannot_link_constraints=add_cannot_link_constraints,
+                                                           node_sizes=node_sizes,
+                                                           is_merge_edge=is_merge_edge,
+                                                           size_regularizer=size_regularizer,
+                                                           )
+    agglomerativeClustering = nagglo.agglomerativeClustering(cluster_policy)
+
+    tick = time.time()
+    if not return_UCM:
+        agglomerativeClustering.run(**run_kwargs)
+    else:
+        # TODO: add run_kwargs with UCM
+        outputs = agglomerativeClustering.runAndGetMergeTimesAndDendrogramHeight(verbose=False)
+        mergeTimes, UCM = outputs
+    runtime = time.time() - tick
+
+    nodeSeg = agglomerativeClustering.result()
+
+    if return_UCM:
+        return nodeSeg, runtime, UCM, mergeTimes
+    else:
+        return nodeSeg, runtime
+
+
 
 
 
