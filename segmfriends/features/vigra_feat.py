@@ -1,6 +1,8 @@
 import numpy as np
 import vigra
 
+from .mappings import map_features_to_label_array
+from ..utils import find_first_index
 
 def _get_SP_features_VIGRA_extractor(data, segmentation,
                           statistics=None, ignore_label=None):
@@ -67,7 +69,7 @@ def accumulate_segment_features_vigra(data_list, segmentation_list,
         new_max_label = max_labels.max() + 1
         for i in range(nb_segm):
             # Label 0 is not-boundary and always ignored. Add one pixel segment with max-label:
-            first_indx = gen_utils.find_first_index(segmentation_list[i], 0)
+            first_indx = find_first_index(segmentation_list[i], 0)
             first_indices.append(first_indx)
             segmentation_list[i][first_indx] = new_max_label
 

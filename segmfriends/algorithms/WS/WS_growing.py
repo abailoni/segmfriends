@@ -2,6 +2,7 @@ import vigra
 import numpy as np
 from ...features.mappings import map_features_to_label_array
 from ...features import from_affinities_to_hmap
+from ...features.vigra_feat import accumulate_segment_features_vigra
 
 import nifty.graph.rag as nrag
 
@@ -32,18 +33,18 @@ class SizeThreshAndGrowWithWS(object):
         if self.debug:
             print("Computing segment sizes...")
         label_image = label_image.astype(np.uint32)
-        rag = nrag.gridRag(label_image)
-        _, node_features = nrag.accumulateMeanAndLength(rag, label_image.astype('float32'),blockShape=[1,100,100],
-                                             numberOfThreads=8,
-                                             saveMemory=True)
-        nodeSizes = node_features[:, [1]]
-        sizeMap = map_features_to_label_array(label_image,nodeSizes,number_of_threads=6).squeeze()
+        # rag = nrag.gridRag(label_image)
+        # _, node_features = nrag.accumulateMeanAndLength(rag, label_image.astype('float32'),blockShape=[1,100,100],
+        #                                      numberOfThreads=8,
+        #                                      saveMemory=True)
+        # nodeSizes = node_features[:, [1]]
+        # sizeMap = map_features_to_label_array(label_image,nodeSizes,number_of_threads=6).squeeze()
 
-        # sizeMap = accumulate_segment_features_vigra([label_image],
-        #                                                   [label_image],
-        #                                                   ['Count'],
-        #                                                   map_to_image=True
-        # ).squeeze()
+        sizeMap = accumulate_segment_features_vigra([label_image],
+                                                          [label_image],
+                                                          ['Count'],
+                                                          map_to_image=True
+        ).squeeze()
 
         sizeMask = sizeMap > self.size_threshold
         seeds = ((label_image+1)*sizeMask).astype(np.uint32)

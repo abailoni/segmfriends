@@ -3,7 +3,7 @@ import numpy as np
 import vigra
 from ..io.infer_loader import SimpleParallelLoader
 from ..utils.various import yaml2dict
-
+from inferno.io.volumetric import VolumeLoader
 
 
 def process_batch(batches, dataset, get_slicings, segmentation_pipeline):
@@ -83,11 +83,11 @@ class BlockWise(object):
 
     def __call__(self, *inputs_):
         assert len(inputs_) == 1 or len(inputs_) == 2
-        # TODO: check that input_ is a dataset (and input 2 is numpy)
         input_ = inputs_[0]
-        final_crop = tuple(slice(pad[0], input_.volume.shape[i+1] - pad[1]) for i, pad in enumerate(input_.padding[1:]))
+        # final_crop = tuple(slice(pad[0], input_.volume.shape[i+1] - pad[1]) for i, pad in enumerate(input_.padding[1:]))
         if self.blockwise:
             assert len(inputs_) == 1, "Input segmentation not supported with blockwise"
+            assert isinstance(input_, VolumeLoader)
             # TODO: change this!!
             # At the moment if we crop the padding, then we need to crop the global border for the final
             # agglomeration (but in this way we lose affinities context).
@@ -116,10 +116,14 @@ class BlockWise(object):
             else:
                 return output_segm
         else:
+            if isinstance(input_, VolumeLoader):
+                input_ = input_.volume
+            # if isinstance(inputs_[1], VolumeLoader):
+            #     inputs_[1] = inputs_[1].volume
             if len(inputs_) == 1:
-                output_segm = self.segmentation_pipeline(input_.volume)
+                output_segm = self.segmentation_pipeline(input_)
             elif len(inputs_) == 2:
-                output_segm = self.segmentation_pipeline(input_.volume, inputs_[1])
+                output_segm = self.segmentation_pipeline(input_, inputs_[1])
             else:
                 raise NotImplementedError()
             if self.return_fragments:

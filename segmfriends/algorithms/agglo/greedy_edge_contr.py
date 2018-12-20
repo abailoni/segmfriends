@@ -136,8 +136,8 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
         featurer_outputs = self.featurer(affinities, segmentation)
 
         graph = featurer_outputs['graph']
-        if 'merge_prio' in featurer_outputs:
-            raise DeprecationWarning('Max accumulation no longer supported')
+        # if 'merge_prio' in featurer_outputs:
+        #     raise DeprecationWarning('Max accumulation no longer supported')
             # merge_prio = featurer_outputs['merge_prio']
             # not_merge_prio = featurer_outputs['not_merge_prio']
 
@@ -246,23 +246,24 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         # Build policy:
         edge_weights = graph.edgeValues(np.rollaxis(affinities, 0, 4))
 
+        # Compute log costs:
+        new_aff = edge_weights
+
+        # # Cost setup B:
+        # new_aff = edge_weights / 2.00
+        # new_aff[np.logical_not(is_local_edge)] -= 0.5
+        # new_aff += 0.5
+
+        # # Cost setup C:
+        # new_aff = edge_weights.copy()
+        # is_long_range_edge = np.logical_not(is_local_edge)
+        # new_aff[is_local_edge][new_aff[is_local_edge] < 0.5] = 0.5
+        # new_aff[is_long_range_edge][new_aff[is_long_range_edge] > 0.5] = 0.5
+
+        log_costs = probs_to_costs(1 - new_aff, beta=0.5)
+        log_costs = log_costs * edge_sizes / edge_sizes.max()
+
         if self.use_log_costs:
-            new_aff = edge_weights
-
-            # # Cost setup B:
-            # new_aff = edge_weights / 2.00
-            # new_aff[np.logical_not(is_local_edge)] -= 0.5
-            # new_aff += 0.5
-
-            # # Cost setup C:
-            # new_aff = edge_weights.copy()
-            # is_long_range_edge = np.logical_not(is_local_edge)
-            # new_aff[is_local_edge][new_aff[is_local_edge] < 0.5] = 0.5
-            # new_aff[is_long_range_edge][new_aff[is_long_range_edge] > 0.5] = 0.5
-
-            log_costs = probs_to_costs(1 - new_aff, beta=0.5)
-            log_costs = log_costs * edge_sizes / edge_sizes.max()
-
             signed_weights = log_costs
         else:
             signed_weights = edge_weights - 0.5
@@ -272,11 +273,11 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
             # negative_weights = (edge_weights - 1.) * np.logical_not(is_local_edge)
             # signed_weights = positive_weights + negative_weights
 
-        nodeSeg, runtime, UCMap, mergeTimes = \
+        nodeSeg, runtime = \
             runGreedyGraphEdgeContraction(graph, signed_weights,
                                           edge_sizes=edge_sizes,
                                           is_merge_edge=is_local_edge,
-                                         return_UCM=True,
+                                         return_UCM=False,
                                           **self.extra_aggl_kwargs)
 
 
@@ -285,8 +286,8 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         # Take only local:
         edge_IDs = edge_IDs
 
-        final_UCM = np.squeeze(
-            mappings.map_features_to_label_array(edge_IDs, np.expand_dims(mergeTimes, axis=-1)))
+        # final_UCM = np.squeeze(
+        #     mappings.map_features_to_label_array(edge_IDs, np.expand_dims(mergeTimes, axis=-1)))
 
         edge_labels = graph.nodesLabelsToEdgeLabels(nodeSeg)
         MC_energy = (log_costs * edge_labels).sum()
@@ -295,7 +296,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
 
         segmentation = nodeSeg.reshape(image_shape)
 
-        return segmentation, final_UCM
+        return segmentation, MC_energy
 
 
 def runGreedyGraphEdgeContraction(

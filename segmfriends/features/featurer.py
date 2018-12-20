@@ -124,8 +124,8 @@ class FeaturerLongRangeAffs(object):
                         offsets_weights=offsets_weights,
                         number_of_threads=self.n_threads)
                 out_dict['edge_indicators'] = edge_indicators
-                out_dict['merge_prio'] = edge_indicators
-                out_dict['not_merge_prio'] = 1 - edge_indicators
+                # out_dict['merge_prio'] = edge_indicators
+                # out_dict['not_merge_prio'] = 1 - edge_indicators
                 out_dict['edge_sizes'] = edge_sizes
             elif self.statistic == 'max':
                 # DEPRECATED
@@ -149,8 +149,8 @@ class FeaturerLongRangeAffs(object):
                         number_of_threads=self.n_threads)
                 edge_indicators = merge_prio
                 out_dict['edge_indicators'] = merge_prio
-                out_dict['merge_prio'] = merge_prio
-                out_dict['not_merge_prio'] = not_merge_prio
+                # out_dict['merge_prio'] = merge_prio
+                # out_dict['not_merge_prio'] = not_merge_prio
                 out_dict['edge_sizes'] = edge_sizes
             else:
                 raise NotImplementedError
