@@ -205,6 +205,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         """
         super(GreedyEdgeContractionAgglomerater, self).__init__(*super_args, **super_kwargs)
 
+        self.impose_local_attraction = self.extra_aggl_kwargs.pop('impose_local_attraction', False)
         self.offsets_probabilities = offsets_probabilities
 
 
@@ -247,7 +248,6 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         edge_weights = graph.edgeValues(np.rollaxis(affinities, 0, 4))
 
         # Compute log costs:
-        new_aff = edge_weights
 
         # # Cost setup B:
         # new_aff = edge_weights / 2.00
@@ -260,7 +260,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         # new_aff[is_local_edge][new_aff[is_local_edge] < 0.5] = 0.5
         # new_aff[is_long_range_edge][new_aff[is_long_range_edge] > 0.5] = 0.5
 
-        log_costs = probs_to_costs(1 - new_aff, beta=0.5)
+        log_costs = probs_to_costs(1 - edge_weights, beta=0.5)
         log_costs = log_costs * edge_sizes / edge_sizes.max()
 
         if self.use_log_costs:
@@ -268,6 +268,12 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         else:
             signed_weights = edge_weights - 0.5
 
+        ignored_edge_weights = None
+        if self.impose_local_attraction:
+            # Ignore local repulsive edges:
+            ignored_edge_weights = np.logical_and(is_local_edge, edge_weights < 0)
+            # Ignore lifted attractive edges:
+            ignored_edge_weights = np.logical_or(np.logical_and(np.logical_not(is_local_edge), edge_weights > 0), ignored_edge_weights)
             # # MWS setup with repulsive lifted edges:
             # positive_weights = edge_weights * is_local_edge
             # negative_weights = (edge_weights - 1.) * np.logical_not(is_local_edge)
@@ -278,6 +284,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
                                           edge_sizes=edge_sizes,
                                           is_merge_edge=is_local_edge,
                                          return_UCM=False,
+                                          ignored_edge_weights=ignored_edge_weights,
                                           **self.extra_aggl_kwargs)
 
 
@@ -290,6 +297,9 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         #     mappings.map_features_to_label_array(edge_IDs, np.expand_dims(mergeTimes, axis=-1)))
 
         edge_labels = graph.nodesLabelsToEdgeLabels(nodeSeg)
+        if self.impose_local_attraction:
+            # Set ignored edge costs to zero:
+            log_costs *= np.logical_not(ignored_edge_weights)
         MC_energy = (log_costs * edge_labels).sum()
         print("MC energy: {}".format(MC_energy))
         print("Agglomerated in {} s".format(runtime))
@@ -310,8 +320,12 @@ def runGreedyGraphEdgeContraction(
                           is_merge_edge = None,
                           size_regularizer = 0.0,
                           return_UCM = False,
+                          ignored_edge_weights = None,
                           **run_kwargs):
     """
+    :param ignored_edge_weights: boolean array, if an edge label is True, than the passed signed weight is ignored
+            (neither attractive nor repulsive)
+
     Returns node_labels and runtime. If return_UCM == True, then also returns the UCM and the merging iteration for
     every edge.
     """
@@ -323,6 +337,7 @@ def runGreedyGraphEdgeContraction(
                                                            node_sizes=node_sizes,
                                                            is_merge_edge=is_merge_edge,
                                                            size_regularizer=size_regularizer,
+                                                           ignored_edge_weights=ignored_edge_weights
                                                            )
     agglomerativeClustering = nagglo.agglomerativeClustering(cluster_policy)
 
