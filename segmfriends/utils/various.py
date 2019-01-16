@@ -51,7 +51,7 @@ def parse_data_slice(data_slice):
         # Build slices
         slices.append(slice(start, stop, step))
     # Done.
-    return slices
+    return tuple(slices)
 
 # Yaml to dict reader
 def yaml2dict(path):

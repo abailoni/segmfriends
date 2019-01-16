@@ -9,6 +9,8 @@ from ...utils.graph import build_pixel_lifted_graph_from_offsets
 from ..segm_pipeline import SegmentationPipeline
 from ...features.utils import probs_to_costs
 
+from affogato.segmentation import compute_mws_clustering
+
 import time
 
 class GreedyEdgeContractionClustering(SegmentationPipeline):
@@ -21,6 +23,8 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
                  invert_affinities=False,
                  extra_aggl_kwargs=None,
                  extra_runAggl_kwargs=None,
+                 strides=None,
+                 return_UCM=False,
                  **super_kwargs):
         """
         If a fragmenter is passed (DTWS, SLIC, etc...) then the agglomeration is done
@@ -56,7 +60,9 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
                 offsets_weights=offsets_weights,
                 invert_affinities=invert_affinities,
                 extra_aggl_kwargs=extra_aggl_kwargs,
-                extra_runAggl_kwargs=extra_runAggl_kwargs
+                extra_runAggl_kwargs=extra_runAggl_kwargs,
+                strides=strides,
+                return_UCM=return_UCM
             )
             super(GreedyEdgeContractionClustering, self).__init__(agglomerater, **super_kwargs)
 
@@ -197,7 +203,7 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
 
 
 class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
-    def __init__(self, *super_args, offsets_probabilities=None,
+    def __init__(self, *super_args, offsets_probabilities=None, strides=None, return_UCM=False,
                  **super_kwargs):
         """
         Note that the initial SP accumulation at the moment is always given
@@ -207,6 +213,8 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
 
         self.impose_local_attraction = self.extra_aggl_kwargs.pop('impose_local_attraction', False)
         self.offsets_probabilities = offsets_probabilities
+        self.strides = strides
+        self.return_UCM = return_UCM
 
 
     def __call__(self, affinities):
@@ -241,7 +249,8 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
                 offsets,
                 offsets_probabilities=offsets_probabilities,
                 offsets_weights=offsets_weights,
-                nb_local_offsets=3
+                nb_local_offsets=3,
+                strides=self.strides
             )
 
         # Build policy:
@@ -270,31 +279,46 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
 
         ignored_edge_weights = None
         if self.impose_local_attraction:
-            # Ignore local repulsive edges:
-            ignored_edge_weights = np.logical_and(is_local_edge, edge_weights < 0)
-            # Ignore lifted attractive edges:
-            ignored_edge_weights = np.logical_or(np.logical_and(np.logical_not(is_local_edge), edge_weights > 0), ignored_edge_weights)
-            # # MWS setup with repulsive lifted edges:
-            # positive_weights = edge_weights * is_local_edge
-            # negative_weights = (edge_weights - 1.) * np.logical_not(is_local_edge)
+            # FIXME: only working for max and average at the moment! Not working with the costs
+            # # APPROACH 1: NOT WORKING
+            # # Ignore local repulsive edges:
+            # ignored_edge_weights = np.logical_and(is_local_edge, edge_weights < 0)
+            # # Ignore lifted attractive edges:
+            # ignored_edge_weights = np.logical_or(np.logical_and(np.logical_not(is_local_edge), edge_weights > 0), ignored_edge_weights)
+
+
+            # MWS setup with repulsive lifted edges: (this works)
+            positive_weights = edge_weights * is_local_edge
+            negative_weights = (edge_weights - 1.) * np.logical_not(is_local_edge)
+            signed_weights = positive_weights + negative_weights
+
+            # # Setting to zero the weights:
+            # positive_weights = signed_weights * np.logical_and(is_local_edge, signed_weights > 0 )
+            # negative_weights = signed_weights * np.logical_and(np.logical_not(is_local_edge), signed_weights < 0)
             # signed_weights = positive_weights + negative_weights
 
-        nodeSeg, runtime = \
+        outs = \
             runGreedyGraphEdgeContraction(graph, signed_weights,
                                           edge_sizes=edge_sizes,
                                           is_merge_edge=is_local_edge,
-                                         return_UCM=False,
+                                         return_UCM=self.return_UCM,
                                           ignored_edge_weights=ignored_edge_weights,
                                           **self.extra_aggl_kwargs)
 
+        if self.return_UCM:
+            nodeSeg, runtime, UCM, mergeTimes = outs
 
-        edge_IDs = graph.mapEdgesIDToImage()
+            edge_IDs = graph.mapEdgesIDToImage()
+            UCM = np.squeeze(
+                mappings.map_features_to_label_array(edge_IDs, np.expand_dims(UCM, axis=-1), fill_value=-15.))
+            mergeTimes = np.squeeze(
+                mappings.map_features_to_label_array(edge_IDs, np.expand_dims(mergeTimes, axis=-1), fill_value=-15.)).astype('int64')
+            UCM = np.rollaxis(UCM, -1, 0)
+            mergeTimes = np.rollaxis(mergeTimes, -1, 0)
 
-        # Take only local:
-        edge_IDs = edge_IDs
 
-        # final_UCM = np.squeeze(
-        #     mappings.map_features_to_label_array(edge_IDs, np.expand_dims(mergeTimes, axis=-1)))
+        else:
+            nodeSeg, runtime = outs
 
         edge_labels = graph.nodesLabelsToEdgeLabels(nodeSeg)
         if self.impose_local_attraction:
@@ -306,7 +330,10 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
 
         segmentation = nodeSeg.reshape(image_shape)
 
-        return segmentation, MC_energy
+        if self.return_UCM:
+            return segmentation, MC_energy, UCM, mergeTimes
+        else:
+            return segmentation, MC_energy
 
 
 def runGreedyGraphEdgeContraction(
@@ -321,6 +348,8 @@ def runGreedyGraphEdgeContraction(
                           size_regularizer = 0.0,
                           return_UCM = False,
                           ignored_edge_weights = None,
+                          remove_small_segments = False,
+                          small_segments_thresh = 10,
                           **run_kwargs):
     """
     :param ignored_edge_weights: boolean array, if an edge label is True, than the passed signed weight is ignored
@@ -329,33 +358,52 @@ def runGreedyGraphEdgeContraction(
     Returns node_labels and runtime. If return_UCM == True, then also returns the UCM and the merging iteration for
     every edge.
     """
-    cluster_policy = nagglo.greedyGraphEdgeContraction(graph, signed_edge_weights,
-                                                           edge_sizes=edge_sizes,
-                                                           update_rule=update_rule,
-                                                           threshold=threshold,
-                                                           add_cannot_link_constraints=add_cannot_link_constraints,
-                                                           node_sizes=node_sizes,
-                                                           is_merge_edge=is_merge_edge,
-                                                           size_regularizer=size_regularizer,
-                                                           ignored_edge_weights=ignored_edge_weights
-                                                           )
-    agglomerativeClustering = nagglo.agglomerativeClustering(cluster_policy)
-
-    tick = time.time()
-    if not return_UCM:
-        agglomerativeClustering.run(**run_kwargs)
-    else:
-        # TODO: add run_kwargs with UCM
-        outputs = agglomerativeClustering.runAndGetMergeTimesAndDendrogramHeight(verbose=False)
-        mergeTimes, UCM = outputs
-    runtime = time.time() - tick
-
-    nodeSeg = agglomerativeClustering.result()
-
-    if return_UCM:
-        return nodeSeg, runtime, UCM, mergeTimes
-    else:
+    if update_rule == 'max':
+        # In this case we use the efficient MWS clustering implementation in affogato:
+        nb_nodes = graph.numberOfNodes
+        uv_ids = graph.uvIds()
+        mutex_edges = signed_edge_weights < 0.
+        tick = time.time()
+        # This function will sort the edges in ascending order, so we transform all the edges to negative values
+        nodeSeg = compute_mws_clustering(nb_nodes,
+                               uv_ids[np.logical_not(mutex_edges)],
+                               uv_ids[mutex_edges],
+                               signed_edge_weights[np.logical_not(mutex_edges)],
+                               -signed_edge_weights[mutex_edges])
+        runtime = time.time() - tick
         return nodeSeg, runtime
+    else:
+
+        cluster_policy = nagglo.greedyGraphEdgeContraction(graph, signed_edge_weights,
+                                                               edge_sizes=edge_sizes,
+                                                               update_rule=update_rule,
+                                                               threshold=threshold,
+                                                               add_cannot_link_constraints=add_cannot_link_constraints,
+                                                               node_sizes=node_sizes,
+                                                               is_merge_edge=is_merge_edge,
+                                                               size_regularizer=size_regularizer,
+                                                               ignored_edge_weights=ignored_edge_weights,
+                                                                remove_small_segments=remove_small_segments,
+                                                                small_segments_thresh=small_segments_thresh
+                                                               )
+        agglomerativeClustering = nagglo.agglomerativeClustering(cluster_policy)
+
+        tick = time.time()
+        if not return_UCM:
+            agglomerativeClustering.run(**run_kwargs)
+        else:
+            # TODO: add run_kwargs with UCM
+            outputs = agglomerativeClustering.runAndGetMergeTimesAndDendrogramHeight(verbose=False)
+            mergeTimes, UCM = outputs
+
+        runtime = time.time() - tick
+
+        nodeSeg = agglomerativeClustering.result()
+
+        if return_UCM:
+            return nodeSeg, runtime, UCM, mergeTimes
+        else:
+            return nodeSeg, runtime
 
 
 

@@ -61,6 +61,7 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
                                           GT_label_image=None,
                                           offsets_probabilities=None,
                                           offsets_weights=None,
+                                          strides=None,
                                           nb_local_offsets=3):
     """
     :param offsets: At the moment local offsets should be the first ones
@@ -81,7 +82,8 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
     tick = time.time()
     graph = undirectedLongRangeGridGraph(image_shape, offsets, is_local_offset,
                         offsets_probabilities=offsets_probabilities,
-                        labels=label_image)
+                        labels=label_image,
+                                         strides=strides)
     nb_nodes = graph.numberOfNodes
     # print(label_image)
     # print(is_local_offset)

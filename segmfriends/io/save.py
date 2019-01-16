@@ -1,5 +1,7 @@
 import numpy as np
 import vigra
+import getpass
+import socket
 
 from ..features import probs_to_costs, FeaturerLongRangeAffs
 from ..utils import cantor_pairing_fct
@@ -45,3 +47,15 @@ def save_edge_indicators_students(affinities, segmentation, offsets, save_path,
 
     vigra.writeHDF5(costs, save_path, 'edge_weights', compression='gzip')
     vigra.writeHDF5(uvIds, save_path, 'uv_IDs', compression='gzip')
+
+def get_hci_home_path():
+    username = getpass.getuser()
+    hostname = socket.gethostname()
+    if hostname == 'trendytukan' and username == 'abailoni':
+        return '/net/hciserver03/storage/abailoni/'
+    elif hostname == 'trendytukan' and username == 'abailoni_local':
+        return '/home/abailoni_local/hci_home/'
+    elif hostname == 'ialgpu01':
+        return '/home/abailoni/hci_home/'
+    else:
+        return '/net/hciserver03/storage/abailoni/'
