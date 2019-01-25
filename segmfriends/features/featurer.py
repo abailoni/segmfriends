@@ -159,6 +159,8 @@ class FeaturerLongRangeAffs(object):
         if not self.return_dict:
             edge_features = np.stack([edge_indicators, edge_sizes, is_local_edge])
             # NOTE: lifted graph is not returned!
+            if self.max_distance_lifted_edges != 1:
+                raise NotImplementedError("Lifted graph is computed but not returned!")
             return rag, edge_features
         else:
             out_dict['is_local_edge'] = is_local_edge

@@ -49,7 +49,15 @@ def probs_to_costs(probs,
                    rag=None,
                    segmentation=None,
                    weight=16.):
-    # Probs: prob. map (0: merge; 1: split)
+    """
+    :param probs: expected a probability map (0.0 merge or 1.0 split)
+    :param beta: bias factor (with 1.0 everything is repulsive, with 0. everything is attractive)
+    :param weighting_scheme:
+    :param rag:
+    :param segmentation:
+    :param weight:
+    :return:
+    """
     p_min = 0.001
     p_max = 1. - p_min
     # Costs: positive (merge), negative (split)

@@ -62,10 +62,12 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
                                           offsets_probabilities=None,
                                           offsets_weights=None,
                                           strides=None,
-                                          nb_local_offsets=3):
+                                          nb_local_offsets=3,
+                                          downscaling_factor=None):
     """
     :param offsets: At the moment local offsets should be the first ones
     :param nb_local_offsets: UPDATE AND GENERALIZE!
+    :param downscaling_factor: If a list [1,2,2] is given, then the image resolution is scaled down first
     """
     image_shape = tuple(image_shape) if not isinstance(image_shape, tuple) else image_shape
 

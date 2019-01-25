@@ -9,6 +9,14 @@ def recursive_dict_update(source, target):
             target[key] = source[key]
     return target
 
+def return_recursive_key_in_dict(dictionary, keys):
+    assert isinstance(dictionary, dict)
+    assert isinstance(keys, list)
+    output = dictionary
+    for key in keys:
+        output = output[key]
+    return output
+
 def adapt_configs_to_model(model_IDs,
                            debug=False,
                             **configs):

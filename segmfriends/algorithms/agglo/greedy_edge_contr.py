@@ -165,9 +165,9 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
         #                                                                                           segmentation, statistics=["Count"],
         #                                                                                           normalization_mode=None, map_to_image=False))
 
+        log_costs = probs_to_costs(1 - edge_indicators, beta=0.5)
+        log_costs = log_costs * edge_sizes / edge_sizes.max()
         if self.use_log_costs:
-            log_costs = probs_to_costs(1 - edge_indicators, beta=0.5)
-            log_costs = log_costs * edge_sizes / edge_sizes.max()
             signed_weights = log_costs
         else:
             signed_weights = edge_indicators - 0.5
@@ -195,7 +195,13 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
             number_of_threads=self.n_threads
         )[..., 0]
 
-        return final_segm
+        # Compute MC energy:
+        edge_labels = graph.nodesLabelsToEdgeLabels(node_labels)
+        MC_energy = (log_costs * edge_labels).sum()
+        if self.debug:
+            print("MC energy: {}".format(MC_energy))
+
+        return final_segm, MC_energy
 
 
 
@@ -204,6 +210,7 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
 
 class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
     def __init__(self, *super_args, offsets_probabilities=None, strides=None, return_UCM=False,
+                downscaling_factor=None,
                  **super_kwargs):
         """
         Note that the initial SP accumulation at the moment is always given
@@ -215,6 +222,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         self.offsets_probabilities = offsets_probabilities
         self.strides = strides
         self.return_UCM = return_UCM
+        self.downscaling_factor = downscaling_factor
 
 
     def __call__(self, affinities):
