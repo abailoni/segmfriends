@@ -17,9 +17,11 @@ class SizeThreshAndGrowWithWS(object):
                  offsets,
                  hmap_kwargs=None,
                  apply_WS_growing=True,
+                 size_of_2d_slices=False,
                  debug=True):
         """
         :param apply_WS_growing: if False, then the 'seed_mask' is returned
+        :param size_of_2d_slices: compute size for all z-slices (memory efficient)
         """
         self.size_threshold = size_threshold
         self.offsets = offsets
@@ -27,6 +29,7 @@ class SizeThreshAndGrowWithWS(object):
         self.hmap_kwargs = {} if hmap_kwargs is None else hmap_kwargs
         self.apply_WS_growing = apply_WS_growing
         self.debug = debug
+        self.size_of_2d_slices = size_of_2d_slices
 
     def __call__(self, affinities, label_image):
         assert len(self.offsets) == affinities.shape[0], "Affinities does not match offsets"
@@ -40,11 +43,20 @@ class SizeThreshAndGrowWithWS(object):
         # nodeSizes = node_features[:, [1]]
         # sizeMap = map_features_to_label_array(label_image,nodeSizes,number_of_threads=6).squeeze()
 
-        sizeMap = accumulate_segment_features_vigra([label_image],
+        if not self.size_of_2d_slices:
+            sizeMap = accumulate_segment_features_vigra([label_image],
                                                           [label_image],
                                                           ['Count'],
                                                           map_to_image=True
-        ).squeeze()
+            ).squeeze()
+        else:
+            sizeMap = np.empty_like(label_image)
+            for z in range(label_image.shape[0]):
+                sizeMap[z] = accumulate_segment_features_vigra([label_image[[z]]],
+                                                          [label_image[[z]]],
+                                                          ['Count'],
+                                                          map_to_image=True
+                ).squeeze()
 
         sizeMask = sizeMap > self.size_threshold
         seeds = ((label_image+1)*sizeMask).astype(np.uint32)
