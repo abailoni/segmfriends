@@ -1,5 +1,7 @@
 import numpy as np
 from nifty.graph import rag as nrag
+import vigra
+from concurrent import futures
 
 
 def from_affinities_to_hmap(affinities, offsets, used_offsets=None, offset_weights=None):
@@ -97,3 +99,53 @@ def probs_to_costs(probs,
         costs *= w
 
     return costs
+
+
+
+def size_filter(hmap, seg, threshold):
+    segments, counts = np.unique(seg, return_counts=True)
+    mask = np.ma.masked_array(seg, np.in1d(seg, segments[counts < threshold])).mask
+    filtered = seg.copy()
+    filtered[mask] = 0
+    filtered, _ = vigra.analysis.watershedsNew(hmap, seeds=filtered.astype("uint32"))
+    filtered, max_label, _ = vigra.analysis.relabelConsecutive(filtered, start_label=1)
+    return filtered, max_label
+
+
+def superpixel_stacked(hmap, sp2d_fu, n_threads):
+    segmentation = np.zeros(hmap.shape, dtype='uint32')
+
+    def run_sp_2d(z):
+        seg, off = sp2d_fu(hmap[z])
+        segmentation[z] = seg
+        return off + 1
+
+    with futures.ThreadPoolExecutor(max_workers=n_threads) as tp:
+        tasks = [tp.submit(run_sp_2d, z) for z in range(len(segmentation))]
+        offsets = [t.result() for t in tasks]
+
+    offsets = np.roll(offsets, 1)
+    offsets[0] = 0
+    offsets = np.cumsum(offsets).astype('uint32')
+    segmentation += offsets[:, None, None]
+    return segmentation, segmentation.max()
+
+def superpixel_stacked_from_affinities(affinities, sp2d_fu, n_threads):
+    segmentation = np.zeros(affinities.shape[1:], dtype='uint32')
+
+    def run_sp_2d(z):
+        seg, off = sp2d_fu(affinities[:, z])
+        segmentation[z] = seg
+        return off + 1
+
+    with futures.ThreadPoolExecutor(max_workers=n_threads) as tp:
+        tasks = [tp.submit(run_sp_2d, z) for z in range(len(segmentation))]
+        offsets = [t.result() for t in tasks]
+
+    offsets = np.roll(offsets, 1)
+    offsets[0] = 0
+    offsets = np.cumsum(offsets).astype('uint32')
+    segmentation += offsets[:, None, None]
+    return segmentation, segmentation.max()
+
+

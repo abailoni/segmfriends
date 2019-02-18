@@ -6,4 +6,4 @@
 - `python setup.py install`
 
 ### Requirements:
-- inferno, cython, numba
+- To-Do: inferno, cython, numba, constrained_mst, affogato, nifty, neurofire?

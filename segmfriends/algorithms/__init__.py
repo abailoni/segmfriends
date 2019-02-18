@@ -1,0 +1,1 @@
+from .pipeline_from_config import get_segmentation_pipeline
