@@ -106,8 +106,9 @@ def plot_lookahead(ax, lookahead, mergers=True, z_slice=0):
 def get_figure(ncols, nrows, hide_axes=True):
     f, ax = plt.subplots(ncols=ncols, nrows=nrows,
                          figsize=(ncols, nrows))
-    for a in f.get_axes():
-        a.axis('off')
+    if hide_axes:
+        for a in f.get_axes():
+            a.axis('off')
     return f, ax
 
 def save_plot(f, path, file_name):
@@ -115,3 +116,85 @@ def save_plot(f, path, file_name):
     # plt.tight_layout()
     if file_name.endswith('pdf'):
         f.savefig(os.path.join(path, file_name), format='pdf')
+
+
+def set_log_tics(ax, sub_range, sub_ticks, format = "%.2f", axis='x'):
+    """
+    :param sub_range:  [-2, 3]  # powers for the main range (from 0.01 to 1000)
+    :param sub_ticks: [10, 11, 12, 14, 16, 18, 22, 25, 35, 45] put a tick every 10, every 12, 14...
+    :param format: standard float string formatting
+    :param axis: 'x', 'y'
+    :return:
+    """
+    if axis == 'y':
+        ax.set_yscale("log")
+
+        # user controls
+        #####################################################
+
+        # set scalar and string format floats
+        #####################################################
+        ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+        ax.yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter(format))
+        ax.yaxis.set_minor_formatter(matplotlib.ticker.ScalarFormatter())
+        ax.yaxis.set_minor_formatter(matplotlib.ticker.FormatStrFormatter(format))
+
+        # force 'autoscale'
+        #####################################################
+        yd = []  # matrix of y values from all lines on plot
+        for n in range(len(plt.gca().get_lines())):
+            line = plt.gca().get_lines()[n]
+            yd.append((line.get_ydata()).tolist())
+        yd = [item for sublist in yd for item in sublist]
+        ymin, ymax = np.min(yd), np.max(yd)
+        ax.set_ylim([0.9 * ymin, 1.1 * ymax])
+
+        # add sub minor ticks
+        #####################################################
+        set_sub_formatter = []
+        for i in sub_ticks:
+            for j in range(sub_range[0], sub_range[1]):
+                set_sub_formatter.append(i * 10 ** j)
+        k = []
+        for l in set_sub_formatter:
+            if ymin < l < ymax:
+                k.append(l)
+        ax.set_yticks(k)
+        ####################################################
+    elif   axis == 'x':
+        ax.set_xscale("log")
+
+        # user controls
+        #####################################################
+
+        # set scalar and string format floats
+        #####################################################
+        ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+        ax.xaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter(format))
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.ScalarFormatter())
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.FormatStrFormatter(format))
+
+        # force 'autoscale'
+        #####################################################
+        yd = []  # matrix of y values from all lines on plot
+        for n in range(len(plt.gca().get_lines())):
+            line = plt.gca().get_lines()[n]
+            yd.append((line.get_xdata()).tolist())
+        yd = [item for sublist in yd for item in sublist]
+        ymin, ymax = np.min(yd), np.max(yd)
+        ax.set_xlim([0.9 * ymin, 1.1 * ymax])
+
+        # add sub minor ticks
+        #####################################################
+        set_sub_formatter = []
+        for i in sub_ticks:
+            for j in range(sub_range[0], sub_range[1]):
+                set_sub_formatter.append(i * 10 ** j)
+        k = []
+        for l in set_sub_formatter:
+            if ymin < l < ymax:
+                k.append(l)
+        ax.set_xticks(k)
+        ####################################################
+    else:
+        raise ValueError("Axis must be 'x' or 'y'" )

@@ -6,4 +6,4 @@
 - `python setup.py install`
 
 ### Requirements:
-- inferno
+- inferno, cython, numba
