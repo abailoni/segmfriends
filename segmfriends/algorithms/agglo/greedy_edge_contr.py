@@ -8,6 +8,7 @@ from ...features.featurer import FeaturerLongRangeAffs
 from ...utils.graph import build_pixel_lifted_graph_from_offsets
 from ..segm_pipeline import SegmentationPipeline
 from ...features.utils import probs_to_costs
+from ...transform.segm_to_bound import compute_mask_boundaries_graph
 
 from affogato.segmentation import compute_mws_clustering
 
@@ -15,7 +16,6 @@ import time
 
 class GreedyEdgeContractionClustering(SegmentationPipeline):
     def __init__(self, offsets, fragmenter=None,
-                 max_distance_lifted_edges=3,
                  offsets_probabilities=None,
                  used_offsets=None,
                  offsets_weights=None,
@@ -25,6 +25,8 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
                  extra_runAggl_kwargs=None,
                  strides=None,
                  return_UCM=False,
+                 nb_merge_offsets=3,
+                 debug=False,
                  **super_kwargs):
         """
         If a fragmenter is passed (DTWS, SLIC, etc...) then the agglomeration is done
@@ -42,13 +44,16 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
         if fragmenter is not None:
             agglomerater = GreedyEdgeContractionAgglomeraterFromSuperpixels(
                 offsets,
-                max_distance_lifted_edges=max_distance_lifted_edges,
                 used_offsets=used_offsets,
                 offsets_weights=offsets_weights,
                 n_threads=n_threads,
+                offsets_probabilities=offsets_probabilities,
                 invert_affinities=invert_affinities,
                 extra_aggl_kwargs=extra_aggl_kwargs,
-                extra_runAggl_kwargs=extra_runAggl_kwargs
+                extra_runAggl_kwargs=extra_runAggl_kwargs,
+                nb_merge_offsets=nb_merge_offsets,
+                return_UCM=return_UCM,
+                debug=debug
             )
             super(GreedyEdgeContractionClustering, self).__init__(fragmenter, agglomerater, **super_kwargs)
         else:
@@ -61,8 +66,10 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
                 invert_affinities=invert_affinities,
                 extra_aggl_kwargs=extra_aggl_kwargs,
                 extra_runAggl_kwargs=extra_runAggl_kwargs,
+                nb_merge_offsets=nb_merge_offsets,
                 strides=strides,
-                return_UCM=return_UCM
+                return_UCM=return_UCM,
+                debug=debug
             )
             super(GreedyEdgeContractionClustering, self).__init__(agglomerater, **super_kwargs)
 
@@ -75,7 +82,10 @@ class GreedyEdgeContractionAgglomeraterBase(object):
                  offsets_weights=None,
                  extra_aggl_kwargs=None,
                  extra_runAggl_kwargs=None,
+                 nb_merge_offsets=3,
                  debug=True,
+                 return_UCM=False,
+                 offsets_probabilities=None,
                  ):
         """
                 Starts from pixels.
@@ -104,22 +114,25 @@ class GreedyEdgeContractionAgglomeraterBase(object):
         self.offsets = offsets
         self.debug = debug
         self.n_threads = n_threads
+        self.return_UCM = return_UCM
         self.invert_affinities = invert_affinities
+        self.offset_probabilities = offsets_probabilities
+        self.nb_merge_offsets = nb_merge_offsets
         self.extra_aggl_kwargs = extra_aggl_kwargs if extra_aggl_kwargs is not None else {}
         self.use_log_costs = self.extra_aggl_kwargs.pop('use_log_costs', False)
         self.extra_runAggl_kwargs = extra_runAggl_kwargs if extra_runAggl_kwargs is not None else {}
 
 
 class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAgglomeraterBase):
-    def __init__(self, *super_args, max_distance_lifted_edges=3,
+    def __init__(self, *super_args,
                  **super_kwargs):
         """
         Note that the initial SP accumulation at the moment is always given
         by an average!
         """
         super(GreedyEdgeContractionAgglomeraterFromSuperpixels, self).__init__(*super_args, **super_kwargs)
-        assert isinstance(max_distance_lifted_edges, int)
-        self.max_distance_lifted_edges = max_distance_lifted_edges
+
+        assert self.nb_merge_offsets == 3, "Other options are not implemented yet"
 
         self.featurer = FeaturerLongRangeAffs(self.offsets,
                                               self.offsets_weights,
@@ -128,7 +141,7 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
                                               self.n_threads,
                                               self.invert_affinities,
                                               statistic='mean',
-                                              max_distance_lifted_edges=self.max_distance_lifted_edges,
+                                              offset_probabilities=self.offset_probabilities,
                                               return_dict=True)
 
 
@@ -138,7 +151,33 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
         Here we expect real affinities (1: merge, 0: split).
         If the opposite is passed, set option `invert_affinities == True`
         """
+
+        # ------------------------------------------
+        import vigra
+        # TODO: please move to the fragmenter!
+        pixel_segm = np.arange(np.prod(segmentation.shape), dtype='uint64').reshape(segmentation.shape) + segmentation.max()
+        # Full CREMI:
+        mask1 = (affinities[[0,1,2,4,5]] < 0.3).max(axis=0)
+        mask2 = (affinities[[7,8]] < 0.04).max(axis=0)
+        # Small noise experiments:
+        # mask1 = (affinities[[0, 1, 2, 4, 5]] < 0.6).max(axis=0)
+        # mask2 = (affinities[[7, 8, 10, 11]] < 0.2).max(axis=0)
+        affinities_mask = np.logical_or(mask1, mask2)
+        # affinities_mask = mask1
+        new_segmentation = np.where(affinities_mask, pixel_segm, segmentation)
+        new_segmentation = vigra.analysis.relabelConsecutive(new_segmentation)[0]
+        new_segmentation = vigra.analysis.labelVolume(new_segmentation.astype('uint32'))
+        print("Check new number of nodes!", new_segmentation.max())
+
+        #
+        # vigra.writeHDF5(new_segmentation.astype('uint64'), '/home/abailoni_local/hci_home/temp.h5', 'new_segm')
+
+        segmentation = new_segmentation
+        # vigra.writeHDF5(segmentation.astype('uint64'), '/home/abailoni_local/hci_home/temp.h5', 'segm')
+        # ------------------------------------------
+
         tick = time.time()
+        # TODO: I think I should really consider implementing the max and sum in the statistics...
         featurer_outputs = self.featurer(affinities, segmentation)
 
         graph = featurer_outputs['graph']
@@ -151,6 +190,7 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
         # FIXME: set edge_sizes to rag!!!
         edge_indicators = featurer_outputs['edge_indicators']
         edge_sizes = featurer_outputs['edge_sizes']
+        node_sizes = featurer_outputs['node_sizes']
         is_local_edge = featurer_outputs['is_local_edge']
 
 
@@ -160,13 +200,10 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
             print("Computing node_features...")
             tick = time.time()
 
-        # TODO: atm node sizes are used only with a size regularizer
-        # node_sizes = np.squeeze(vigra_feat.accumulate_segment_features_vigra(segmentation,
-        #                                                                                           segmentation, statistics=["Count"],
-        #                                                                                           normalization_mode=None, map_to_image=False))
 
         log_costs = probs_to_costs(1 - edge_indicators, beta=0.5)
-        log_costs = log_costs * edge_sizes / edge_sizes.max()
+        # FIXME: CAREFUL! Here we are changing the costs depending on the edge size! Sum or average will give really different results...
+        # log_costs = log_costs * edge_sizes / edge_sizes.max()
         if self.use_log_costs:
             signed_weights = log_costs
         else:
@@ -176,17 +213,18 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
             print("Took {} s!".format(time.time() - tick))
             print("Running clustering...")
 
-        node_labels, runtime = \
+        node_labels, out_dict = \
             runGreedyGraphEdgeContraction(graph, signed_weights,
                                           edge_sizes=edge_sizes,
-                                          # node_sizes=node_sizes,
+                                          node_sizes=node_sizes,
                                           is_merge_edge=is_local_edge,
-                                          return_UCM=False,
+                                          return_UCM=self.return_UCM,
+                                          return_agglomeration_data=True,
                                           **self.extra_aggl_kwargs,
                                           **self.extra_runAggl_kwargs)
 
         if self.debug:
-            print("Took {} s!".format(runtime))
+            print("Took {} s!".format(out_dict["runtime"]))
             print("Getting final segm...")
 
         final_segm = mappings.map_features_to_label_array(
@@ -201,7 +239,23 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
         if self.debug:
             print("MC energy: {}".format(MC_energy))
 
-        return final_segm, MC_energy
+        if self.return_UCM:
+            boundary_IDs = compute_mask_boundaries_graph(self.offsets[:3], graph,
+                                          segmentation,
+                                          return_boundary_IDs=True,
+                                          channel_axis=0
+                                          )
+            out_dict['UCM'] = np.squeeze(
+                mappings.map_features_to_label_array(boundary_IDs, np.expand_dims(out_dict['UCM'], axis=-1),
+                                                     fill_value=-15.), axis=-1)
+            out_dict['mergeTimes'] = np.squeeze(
+                mappings.map_features_to_label_array(boundary_IDs, np.expand_dims(out_dict['mergeTimes'], axis=-1),
+                                                     fill_value=-15.), axis=-1)
+
+
+
+        out_dict['MC_energy'] = MC_energy
+        return final_segm, out_dict
 
 
 
@@ -209,7 +263,7 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
 
 
 class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
-    def __init__(self, *super_args, offsets_probabilities=None, strides=None, return_UCM=False,
+    def __init__(self, *super_args, strides=None,
                 downscaling_factor=None,
                  **super_kwargs):
         """
@@ -219,9 +273,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         super(GreedyEdgeContractionAgglomerater, self).__init__(*super_args, **super_kwargs)
 
         self.impose_local_attraction = self.extra_aggl_kwargs.pop('impose_local_attraction', False)
-        self.offsets_probabilities = offsets_probabilities
         self.strides = strides
-        self.return_UCM = return_UCM
         self.downscaling_factor = downscaling_factor
 
 
@@ -231,13 +283,13 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         If the opposite is passed, set option `invert_affinities == True`
         """
         offsets = self.offsets
-        offsets_probabilities = self.offsets_probabilities
+        offset_probabilities = self.offset_probabilities
         offsets_weights = self.offsets_weights
         if self.used_offsets is not None:
             assert len(self.used_offsets) < self.offsets.shape[0]
             offsets = self.offsets[self.used_offsets]
             affinities = affinities[self.used_offsets]
-            offsets_probabilities = self.offsets_probabilities[self.used_offsets]
+            offset_probabilities = self.offset_probabilities[self.used_offsets]
             if isinstance(offsets_weights, (list, tuple)):
                 offsets_weights = np.array(offsets_weights)
             offsets_weights = offsets_weights[self.used_offsets]
@@ -255,9 +307,9 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
             build_pixel_lifted_graph_from_offsets(
                 image_shape,
                 offsets,
-                offsets_probabilities=offsets_probabilities,
+                offsets_probabilities=offset_probabilities,
                 offsets_weights=offsets_weights,
-                nb_local_offsets=3,
+                nb_local_offsets=self.nb_merge_offsets,
                 strides=self.strides
             )
 
@@ -298,50 +350,47 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
             # MWS setup with repulsive lifted edges: (this works)
             positive_weights = edge_weights * is_local_edge
             negative_weights = (edge_weights - 1.) * np.logical_not(is_local_edge)
-            signed_weights = positive_weights + negative_weights
+            # Make sure to keep them in [-0.5, 0.5]:
+            signed_weights = (positive_weights + negative_weights) / 2
 
             # # Setting to zero the weights:
             # positive_weights = signed_weights * np.logical_and(is_local_edge, signed_weights > 0 )
             # negative_weights = signed_weights * np.logical_and(np.logical_not(is_local_edge), signed_weights < 0)
             # signed_weights = positive_weights + negative_weights
 
-        outs = \
+
+        nodeSeg, out_dict = \
             runGreedyGraphEdgeContraction(graph, signed_weights,
                                           edge_sizes=edge_sizes,
                                           is_merge_edge=is_local_edge,
                                          return_UCM=self.return_UCM,
+                                          return_agglomeration_data=True,
                                           ignored_edge_weights=ignored_edge_weights,
                                           **self.extra_aggl_kwargs)
 
         if self.return_UCM:
-            nodeSeg, runtime, UCM, mergeTimes = outs
-
             edge_IDs = graph.mapEdgesIDToImage()
             UCM = np.squeeze(
-                mappings.map_features_to_label_array(edge_IDs, np.expand_dims(UCM, axis=-1), fill_value=-15.))
+                mappings.map_features_to_label_array(edge_IDs, np.expand_dims(out_dict['UCM'], axis=-1), fill_value=-15.), axis=-1)
             mergeTimes = np.squeeze(
-                mappings.map_features_to_label_array(edge_IDs, np.expand_dims(mergeTimes, axis=-1), fill_value=-15.)).astype('int64')
-            UCM = np.rollaxis(UCM, -1, 0)
-            mergeTimes = np.rollaxis(mergeTimes, -1, 0)
+                mappings.map_features_to_label_array(edge_IDs, np.expand_dims(out_dict['mergeTimes'], axis=-1), fill_value=-15.), axis=-1).astype('int64')
+            out_dict['UCM'] = np.rollaxis(UCM, -1, 0)
+            out_dict['mergeTimes'] = np.rollaxis(mergeTimes, -1, 0)
 
-
-        else:
-            nodeSeg, runtime = outs
 
         edge_labels = graph.nodesLabelsToEdgeLabels(nodeSeg)
         if self.impose_local_attraction:
             # Set ignored edge costs to zero:
             log_costs *= np.logical_not(ignored_edge_weights)
         MC_energy = (log_costs * edge_labels).sum()
-        print("MC energy: {}".format(MC_energy))
-        print("Agglomerated in {} s".format(runtime))
+        if self.debug:
+            print("MC energy: {}".format(MC_energy))
+            print("Agglomerated in {} s".format(out_dict['runtime']))
 
         segmentation = nodeSeg.reshape(image_shape)
 
-        if self.return_UCM:
-            return segmentation, MC_energy, UCM, mergeTimes
-        else:
-            return segmentation, MC_energy
+        out_dict['MC_energy'] = MC_energy
+        return segmentation, out_dict
 
 
 def runGreedyGraphEdgeContraction(
@@ -355,6 +404,7 @@ def runGreedyGraphEdgeContraction(
                           is_merge_edge = None,
                           size_regularizer = 0.0,
                           return_UCM = False,
+                          return_agglomeration_data=False,
                           ignored_edge_weights = None,
                           remove_small_segments = False,
                           small_segments_thresh = 10,
@@ -366,11 +416,19 @@ def runGreedyGraphEdgeContraction(
     Returns node_labels and runtime. If return_UCM == True, then also returns the UCM and the merging iteration for
     every edge.
     """
+
     if update_rule == 'max':
+        assert not return_UCM
         # In this case we use the efficient MWS clustering implementation in affogato:
         nb_nodes = graph.numberOfNodes
         uv_ids = graph.uvIds()
         mutex_edges = signed_edge_weights < 0.
+
+        # if is_merge_edge is not None:
+        #     # If we have edges labelled as lifted, they should all be repulsive in this implementation!
+        #     if not is_merge_edge.min():
+        #         assert all(is_merge_edge == np.logical_not(mutex_edges)), "Affogato MWS cannot enforce local merges!"
+
         tick = time.time()
         # This function will sort the edges in ascending order, so we transform all the edges to negative values
         nodeSeg = compute_mws_clustering(nb_nodes,
@@ -379,8 +437,14 @@ def runGreedyGraphEdgeContraction(
                                signed_edge_weights[np.logical_not(mutex_edges)],
                                -signed_edge_weights[mutex_edges])
         runtime = time.time() - tick
-        return nodeSeg, runtime
+        out_dict = {'runtime': runtime}
+
+        return nodeSeg, out_dict
     else:
+        # FIXME: temporary fix for the sum rule
+        # if update_rule == 'sum':
+        #     signed_edge_weights *= edge_sizes
+
 
         cluster_policy = nagglo.greedyGraphEdgeContraction(graph, signed_edge_weights,
                                                                edge_sizes=edge_sizes,
@@ -396,6 +460,8 @@ def runGreedyGraphEdgeContraction(
                                                                )
         agglomerativeClustering = nagglo.agglomerativeClustering(cluster_policy)
 
+        out_dict = {}
+
         tick = time.time()
         if not return_UCM:
             agglomerativeClustering.run(**run_kwargs)
@@ -403,15 +469,16 @@ def runGreedyGraphEdgeContraction(
             # TODO: add run_kwargs with UCM
             outputs = agglomerativeClustering.runAndGetMergeTimesAndDendrogramHeight(verbose=False)
             mergeTimes, UCM = outputs
+            out_dict['UCM'] = UCM
+            out_dict['mergeTimes'] = mergeTimes
 
         runtime = time.time() - tick
 
         nodeSeg = agglomerativeClustering.result()
-
-        if return_UCM:
-            return nodeSeg, runtime, UCM, mergeTimes
-        else:
-            return nodeSeg, runtime
+        out_dict['runtime'] =  runtime
+        if return_agglomeration_data:
+            out_dict['agglomeration_data'] = cluster_policy.exportAgglomerationData()
+        return nodeSeg, out_dict
 
 
 

@@ -1,6 +1,7 @@
 import time
 import nifty
 import numpy as np
+from nifty import graph as ngraph
 from nifty.graph import undirectedLongRangeGridGraph
 
 from ..features import accumulate_affinities_on_graph_edges
@@ -8,51 +9,46 @@ from ..features import accumulate_affinities_on_graph_edges
 
 def build_lifted_graph_from_rag(rag,
                                 label_image,
-                                offsets, max_lifted_distance=3,
-                                number_of_threads=6):
-
-    local_edges = rag.uvIds()
-
-    if max_lifted_distance > 1:
-        # Search for lifted edges in a certain range (max_dist == 1, then only local)
-        long_range_edges = rag.bfsEdges(max_lifted_distance)
+                                offsets, offset_probabilities=None,
+                                nb_offsets_direct_neighbors=3,
+                                number_of_threads=8):
 
 
-        temp_lifted_graph = nifty.graph.undirectedGraph(rag.numberOfNodes)
-        temp_lifted_graph.insertEdges(local_edges)
-        nb_local_edges = temp_lifted_graph.numberOfEdges
-        temp_lifted_graph.insertEdges(long_range_edges)
+    if isinstance(offset_probabilities, np.ndarray):
+        only_local = all(offset_probabilities == 0.)
+    else:
+        only_local = offset_probabilities == 0.
+
+    nb_local_edges = rag.numberOfEdges
+    if only_local:
+        return rag, np.ones((nb_local_edges, ), dtype='bool')
+    else:
+        local_edges = rag.uvIds()
 
 
-        # Check whenever the lifted edges are actually covered by the offsets:
-        fake_affs = np.ones(label_image.shape + (offsets.shape[0], ))
-        label_image = label_image.astype(np.int32)
-        _, edge_sizes = \
-            accumulate_affinities_on_graph_edges(fake_affs, offsets,
-                                                 graph=temp_lifted_graph,
-                                                 label_image=label_image,
-                                                 use_undirected_graph=True,
-                                                 number_of_threads=number_of_threads)
+        used_offsets = offsets[nb_offsets_direct_neighbors:]
 
+        possibly_lifted_edges = ngraph.compute_lifted_edges_from_rag_and_offsets(rag,
+                                                                                 label_image,
+                                                  used_offsets,
+                                                  offsets_probabilities=offset_probabilities,
+                                                  number_of_threads=number_of_threads)
 
-        # Find lifted edges reached by the offsets:
-        edges_to_keep = edge_sizes>0.
-        uvIds_temp_graph = temp_lifted_graph.uvIds()
+        # print("Creating undirected graph..")
 
-        final_lifted_graph = nifty.graph.undirectedGraph(rag.numberOfNodes)
-        final_lifted_graph.insertEdges(uvIds_temp_graph[edges_to_keep])
-        total_nb_edges = final_lifted_graph.numberOfEdges
+        lifted_graph = nifty.graph.undirectedGraph(rag.numberOfNodes)
+        lifted_graph.insertEdges(local_edges)
+        lifted_graph.insertEdges(possibly_lifted_edges)
+        total_nb_edges = lifted_graph.numberOfEdges
 
         is_local_edge = np.zeros(total_nb_edges, dtype=np.int8)
         is_local_edge[:nb_local_edges] = 1
 
-    else:
-        final_lifted_graph = nifty.graph.undirectedGraph(rag.numberOfNodes)
-        final_lifted_graph.insertEdges(local_edges)
-        total_nb_edges = final_lifted_graph.numberOfEdges
-        is_local_edge = np.ones(total_nb_edges, dtype=np.int8)
+        # print("Local edges:", nb_local_edges)
+        # print("Lifted edges:", total_nb_edges - nb_local_edges)
 
-    return final_lifted_graph, is_local_edge
+        return lifted_graph, is_local_edge
+
 
 
 def build_pixel_lifted_graph_from_offsets(image_shape,
@@ -69,6 +65,9 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
     :param nb_local_offsets: UPDATE AND GENERALIZE!
     :param downscaling_factor: If a list [1,2,2] is given, then the image resolution is scaled down first
     """
+    if downscaling_factor is not None:
+        raise NotImplementedError()
+
     image_shape = tuple(image_shape) if not isinstance(image_shape, tuple) else image_shape
 
     is_local_offset = np.zeros(offsets.shape[0], dtype='bool')
@@ -82,7 +81,7 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
     # TODO: change name offsets_probabilities
     # print("Actually building graph...")
     tick = time.time()
-    graph = undirectedLongRangeGridGraph(image_shape, offsets, is_local_offset,
+    graph = ngraph.undirectedLongRangeGridGraph(image_shape, offsets, is_local_offset,
                         offsets_probabilities=offsets_probabilities,
                         labels=label_image,
                                          strides=strides)
