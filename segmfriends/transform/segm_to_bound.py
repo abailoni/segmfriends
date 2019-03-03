@@ -65,10 +65,14 @@ def compute_mask_boundaries_graph(offsets, graph=None, label_image=None, contrac
         return mask
 
 
-def compute_mask_boundaries(label_image,
-                                offsets,
-                                compress_channels=False,
-                                channel_affs=-1):
+
+def compute_boundary_mask_from_label_image(label_image,
+                                           offsets,
+                                           compress_channels=False,
+                                           channel_affs=-1,
+                                           pad_mode='edge',
+                                           pad_constant_values=0,
+                                           background_value=None):
     """
     Faster than the nifty version, but does not check the actual connectivity of the segments (no rag is
     built). A non-local edge could be cut, but it could also connect not-neighboring segments.
@@ -83,8 +87,12 @@ b
         if False, the shape is       (z, x, y)
 
     :param channel_affs: accepted options are 0 or -1
+
+    :param background_value: if either one of the two pixels is equal to background_value, then the edge is
+            labelled as boundary
     """
     # TODO: use the version already implemented in the trasformations and using convolution kernels
+    # TODO: use the standard convention and return affinities!
     assert label_image.ndim == 3
     ndim = 3
 
@@ -92,7 +100,12 @@ b
     for ax in range(3):
         padding[ax][1] = offsets[:,ax].max()
 
-    padded_label_image = np.pad(label_image, pad_width=padding, mode='edge')
+    if pad_mode == 'edge':
+        padded_label_image = np.pad(label_image, pad_width=padding, mode=pad_mode)
+    elif pad_mode == 'constant':
+        padded_label_image = np.pad(label_image, pad_width=padding, mode=pad_mode, constant_values=pad_constant_values)
+    else:
+        raise NotImplementedError
     crop_slices = [slice(0, padded_label_image.shape[ax]-padding[ax][1]) for ax in range(3)]
 
     boundary_mask = []
@@ -101,7 +114,11 @@ b
         for ax, offset_ax in enumerate(offset):
             if offset_ax!=0:
                 rolled_segm = np.roll(rolled_segm, -offset_ax, axis=ax)
-        boundary_mask.append((padded_label_image != rolled_segm)[crop_slices])
+        if background_value is not None:
+            boundary_mask.append(np.logical_or(np.logical_or(padded_label_image == background_value, rolled_segm == background_value),
+                                           padded_label_image != rolled_segm)[crop_slices])
+        else:
+            boundary_mask.append((padded_label_image != rolled_segm)[crop_slices])
 
     boundary_affin = np.stack(boundary_mask)
 

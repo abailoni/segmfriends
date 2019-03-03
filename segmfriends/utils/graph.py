@@ -60,6 +60,7 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
                                           strides=None,
                                           nb_local_offsets=3,
                                           downscaling_factor=None):
+    # TODO: why label_image...?
     """
     :param offsets: At the moment local offsets should be the first ones
     :param nb_local_offsets: UPDATE AND GENERALIZE!
@@ -107,20 +108,23 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
 
 
     if offsets_weights is None or label_image is not None:
-        edge_weights = np.ones(graph.numberOfEdges, dtype='int32')
+        edge_sizes = np.ones(graph.numberOfEdges, dtype='int32')
     else:
         if isinstance(offsets_weights,(list,tuple)):
             offsets_weights = np.array(offsets_weights)
         assert offsets_weights.shape[0] == offsets.shape[0]
 
-        if all([w>=1.0 for w in offsets_weights]):
-            # Take the inverse:
-            offsets_weights = 1. / offsets_weights
+        if offsets_weights.ndim == len(image_shape) + 1:
+            edge_sizes = graph.edgeValues(np.rollaxis(offsets_weights, 0, 4))
         else:
-            assert all([w<=1.0 for w in offsets_weights]) and all([w>=0.0 for w in offsets_weights])
+            if all([w>=1.0 for w in offsets_weights]):
+                # Take the inverse:
+                offsets_weights = 1. / offsets_weights
+            else:
+                assert all([w<=1.0 for w in offsets_weights]) and all([w>=0.0 for w in offsets_weights])
 
-        # print("Edge weights...")
-        edge_weights = offsets_weights[offset_index.astype('int32')]
+            # print("Edge weights...")
+            edge_sizes = offsets_weights[offset_index.astype('int32')]
 
 
     if GT_label_image is None:
@@ -130,4 +134,4 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
         GT_labels_image = GT_label_image.astype(np.uint64)
         GT_labels_nodes = graph.nodeValues(GT_labels_image)
 
-    return graph, is_local_edge, GT_labels_nodes, edge_weights
+    return graph, is_local_edge, GT_labels_nodes, edge_sizes

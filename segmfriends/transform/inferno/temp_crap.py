@@ -7,7 +7,7 @@ from nifty.graph import rag as nrag, agglo as nagglo
 from ...features import map_features_to_label_array, map_edge_features_to_image
 from ...features.vigra_feat import accumulate_segment_features_vigra
 from .segm_to_bound import get_boundary_offsets
-from ..segm_to_bound import compute_mask_boundaries
+from ..segm_to_bound import compute_boundary_mask_from_label_image
 from ...utils import cantor_pairing_fct
 from ..combine_segms_CY import find_best_agglomeration, find_split_GT
 
@@ -71,10 +71,10 @@ class FindBestAgglFromOversegmAndGT(Transform):
 
         if self.border_thickness != 0:
 
-            border_affs = 1- compute_mask_boundaries(GT_labels,
-                                                  self.offsets,
-                                                  compress_channels=False,
-                                                  channel_affs=0)
+            border_affs = 1 - compute_boundary_mask_from_label_image(GT_labels,
+                                                                     self.offsets,
+                                                                     compress_channels=False,
+                                                                     channel_affs=0)
             border_mask = np.logical_and(border_affs[0], border_affs[1])
             if self.ignore_label == 0:
                 GT_labels *= border_mask
@@ -140,10 +140,10 @@ class FindSplitGT(Transform):
 
         if self.border_thickness_GT != 0:
 
-            border_affs = 1- compute_mask_boundaries(GT_labels,
-                                                  self.offsets_GT,
-                                                  compress_channels=False,
-                                                  channel_affs=0)
+            border_affs = 1 - compute_boundary_mask_from_label_image(GT_labels,
+                                                                     self.offsets_GT,
+                                                                     compress_channels=False,
+                                                                     channel_affs=0)
             border_mask = np.logical_and(border_affs[0], border_affs[1])
             if self.ignore_label == 0:
                 GT_labels *= border_mask
@@ -152,10 +152,10 @@ class FindSplitGT(Transform):
 
         # Erode also oversegmentation:
         if self.border_thickness_segm != 0:
-            border_affs = 1 - compute_mask_boundaries(finalSegm,
-                                                      self.offsets_segm,
-                                                      compress_channels=False,
-                                                      channel_affs=0)
+            border_affs = 1 - compute_boundary_mask_from_label_image(finalSegm,
+                                                                     self.offsets_segm,
+                                                                     compress_channels=False,
+                                                                     channel_affs=0)
             border_mask = np.logical_and(border_affs[0], border_affs[1])
             if self.ignore_label == 0:
                 GT_labels *= border_mask
@@ -184,19 +184,19 @@ class FindSplitGT(Transform):
                 z_slice[sizeMap <= 50] = self.ignore_label
 
                 # WS nonsense:
-                mask_for_WS = compute_mask_boundaries(finalSegm[[z]],
-                                        np.array(
+                mask_for_WS = compute_boundary_mask_from_label_image(finalSegm[[z]],
+                                                                     np.array(
                                             get_boundary_offsets([0, 1, 1])),
-                                        compress_channels=True)
+                                                                     compress_channels=True)
                 mask_for_WS = - vigra.filters.boundaryDistanceTransform(mask_for_WS.astype('float32'))
                 mask_for_WS = np.random.normal(scale=0.001, size=mask_for_WS.shape) + mask_for_WS
                 mask_for_WS += abs(mask_for_WS.min())
 
 
-                mask_for_eroding_GT = 1 - compute_mask_boundaries(finalSegm[[z]],
-                                        np.array(
+                mask_for_eroding_GT = 1 - compute_boundary_mask_from_label_image(finalSegm[[z]],
+                                                                                 np.array(
                                             get_boundary_offsets([0, 8, 8])),
-                                        compress_channels=True)
+                                                                                 compress_channels=True)
                 seeds = (z_slice + 1) * mask_for_eroding_GT
 
                 z_slice, _ = vigra.analysis.watershedsNew(mask_for_WS[0].astype('float32'), seeds=seeds[0].astype('uint32'),
