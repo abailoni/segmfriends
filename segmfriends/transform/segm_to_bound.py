@@ -72,7 +72,8 @@ def compute_boundary_mask_from_label_image(label_image,
                                            channel_affs=-1,
                                            pad_mode='edge',
                                            pad_constant_values=0,
-                                           background_value=None):
+                                           background_value=None,
+                                           return_affinities=False):
     """
     Faster than the nifty version, but does not check the actual connectivity of the segments (no rag is
     built). A non-local edge could be cut, but it could also connect not-neighboring segments.
@@ -128,10 +129,14 @@ b
         compressed_mask = np.zeros(label_image.shape[:ndim], dtype=np.int8)
         for ch_nb in range(boundary_affin.shape[0]):
             compressed_mask = np.logical_or(compressed_mask, boundary_affin[ch_nb])
-        return compressed_mask
-
-    if channel_affs==0:
-        return boundary_affin
+        out = compressed_mask
+    elif channel_affs==0:
+        out = boundary_affin
     else:
         assert channel_affs == -1
-        return np.transpose(boundary_affin, (1,2,3,0))
+        out = np.transpose(boundary_affin, (1,2,3,0))
+
+    if return_affinities:
+        return np.logical_not(out)
+    else:
+        return out
