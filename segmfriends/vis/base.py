@@ -74,6 +74,11 @@ def plot_output_affin(target, out_affin, nb_offset=1, z_slice=0):
     # Select the ones along x:
     cax = target.matshow(out_affin[nb_offset,z_slice,:,:], cmap=plt.get_cmap('seismic'), vmin=0, vmax=1, interpolation=DEF_INTERP)
 
+def plot_gray_image(target, image, z_slice=0):
+    # Select the ones along x:
+    cax = target.matshow(image[z_slice, :, :], cmap='gray',
+                         interpolation=DEF_INTERP)
+
 def plot_affs_divergent_colors(ax, out_affin, type='pos', z_slice=0):
     # Select the ones along x:
     if type=='pos':

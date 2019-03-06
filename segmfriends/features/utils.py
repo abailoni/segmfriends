@@ -12,6 +12,9 @@ def from_affinities_to_hmap(affinities, offsets, used_offsets=None, offset_weigh
     :param offset_weights: list of weights
     :return:
     """
+    if isinstance(offsets, list):
+        offsets = np.array(offsets)
+
     inverted_affs = 1. - affinities
     if used_offsets is None:
         used_offsets = range(offsets.shape[0])
@@ -22,8 +25,42 @@ def from_affinities_to_hmap(affinities, offsets, used_offsets=None, offset_weigh
     for i, offs_idx in enumerate(used_offsets):
         offset = offsets[offs_idx]
         shifts = tuple([int(off/2) for off in offset])
-        rolled_affs.append(np.roll(inverted_affs[offs_idx], shifts, axis=(0,1,2)) * offset_weights[i])
+
+        padding = [[0, 0] for _ in range(len(shifts))]
+        for ax, shf in enumerate(shifts):
+            if shf < 0:
+                padding[ax][1] = -shf
+            elif shf > 0:
+                padding[ax][0] = shf
+        padded_inverted_affs = np.pad(inverted_affs, pad_width=((0, 0),) + tuple(padding), mode='constant')
+        crop_slices = [slice(padding[ax][0], padded_inverted_affs.shape[ax+1] - padding[ax][1]) for ax in range(3)]
+        rolled_affs.append(np.roll(padded_inverted_affs[offs_idx], shifts, axis=(0,1,2))[crop_slices] * offset_weights[i])
     prob_map = np.stack(rolled_affs).max(axis=0)
+
+
+    # padding = [[0, 0] for _ in range(3)]
+    # for ax in range(3):
+    #     padding[ax][0] = np.abs(offsets[:, ax].min())
+    #     padding[ax][1] = offsets[:, ax].max()
+    #
+    # padded_inverted_affs = np.pad(inverted_affs, pad_width=((0,0), ) + tuple(padding), mode='constant')
+    # crop_slices = [slice(padding[ax][0], padded_inverted_affs.shape[ax+1] - padding[ax][1]) for ax in range(3)]
+    #
+    # raise NotImplementedError("This is broken")
+    # channelwise_prob_map = []
+    # for i, offs_idx in enumerate(used_offsets):
+    #     offset = offsets[offs_idx]
+    #
+    #     rolled_inv_affs = padded_inverted_affs.copy()
+    #     for ax, offset_ax in enumerate(offset):
+    #         if offset_ax != 0:
+    #             rolled_inv_affs = np.roll(rolled_inv_affs, -offset_ax, axis=ax)
+    #     # new_channelwise_prob_map = np.maximum(rolled_inv_affs[offs_idx], padded_inverted_affs[offs_idx]) * offset_weights[i]
+    #     new_channelwise_prob_map = rolled_inv_affs[offs_idx] * offset_weights[i]
+    #     channelwise_prob_map.append(new_channelwise_prob_map[crop_slices])
+    # prob_map = np.stack(channelwise_prob_map).max(axis=0)
+
+
 
     return prob_map
 

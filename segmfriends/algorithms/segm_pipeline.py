@@ -14,14 +14,14 @@ class SegmentationPipeline(object):
         self.invert_affinities = invert_affinities
         self.return_fragments = return_fragments
 
-    def __call__(self, affinities):
+    def __call__(self, affinities, *args_fragmenter):
         assert isinstance(affinities, np.ndarray)
         assert affinities.ndim == 4, "Need affinities with 4 channels, got %i" % affinities.ndim
         if self.invert_affinities:
             affinities_ = 1. - affinities
         else:
             affinities_ = affinities
-        segmentation = self.fragmenter(affinities_)
+        segmentation = self.fragmenter(affinities_, *args_fragmenter)
 
         # sometimes we want to return fragments for visualisation purposes
         if self.return_fragments:

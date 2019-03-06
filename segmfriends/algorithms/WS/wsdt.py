@@ -101,6 +101,46 @@ class WatershedOnDistanceTransform(WatershedBase):
         return segmentation
 
 
+class IntersectWithBoundaryPixels(object):
+    def __init__(self, offsets,
+                 boundary_threshold=0.5, # 1.0 all boundary, 0.0 no boundary
+                 used_offsets=None,
+                 offset_weights=None):
+        self.offsets = offsets
+        self.used_offsets = used_offsets
+        self.offset_weights = offset_weights
+        self.boundary_threshold = boundary_threshold
+
+    def __call__(self, affinities, segmentation):
+        hmap = from_affinities_to_hmap(affinities, self.offsets, self.used_offsets,
+                                       self.offset_weights)
+        pixel_segm = np.arange(np.prod(segmentation.shape), dtype='uint64').reshape(segmentation.shape) + segmentation.max()
+        boundary_mask = (1.-hmap) < self.boundary_threshold
+        new_segmentation = np.where(boundary_mask, pixel_segm, segmentation)
+        new_segmentation = vigra.analysis.relabelConsecutive(new_segmentation)[0]
+        new_segmentation = vigra.analysis.labelVolume(new_segmentation.astype('uint32'))
+        print("Check new number of nodes!", new_segmentation.max())
+
+        from ... import vis as vis
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(7, 7))
+        for a in fig.get_axes():
+            a.axis('off')
+
+        # affs_repr = np.linalg.norm(affs_repr, axis=-1)
+        # ax.imshow(affs_repr, interpolation="none")
+
+        vis.plot_gray_image(ax[0], hmap, z_slice=1)
+        vis.plot_segm(ax[1], new_segmentation, z_slice=1, highlight_boundaries=False)
+
+        pdf_path = "./hmap.pdf"
+        fig.savefig(pdf_path)
+
+
+        return new_segmentation
+
+
 class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
 
     def __init__(self, offsets, threshold, sigma_seeds,
@@ -108,6 +148,8 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
                  offset_weights=None,
                  return_hmap=False,
                  invert_affinities=False,
+                 intersect_with_boundary_pixels=False,
+                 boundary_pixels_kwargs=None,
                  **super_kwargs):
         if 'from_boundary_maps' in super_kwargs:
             assert super_kwargs['from_boundary_maps']
@@ -127,9 +169,14 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
         self.offset_weights = offset_weights
         self.return_hmap = return_hmap
         self.invert_affinities = invert_affinities
+        self.intersect_with_boundary_pixels = intersect_with_boundary_pixels
+        if self.intersect_with_boundary_pixels:
+            boundary_pixels_kwargs = boundary_pixels_kwargs if boundary_pixels_kwargs is not None else {}
+            self.intersect = IntersectWithBoundaryPixels(offsets, **boundary_pixels_kwargs)
 
 
-    def __call__(self, affinities):
+
+    def __call__(self, affinities, foreground_mask=None):
         """
         Here we expect real affinities (1: merge, 0: split).
         If the opposite is passed, set option `invert_affinities == True`
@@ -144,6 +191,16 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
                                 self.offset_weights)
 
         segmentation = super(WatershedOnDistanceTransformFromAffinities, self).__call__(hmap)
+
+        # Intersect with boundary pixels:
+        if self.intersect_with_boundary_pixels:
+            segmentation = self.intersect(affinities, segmentation)
+
+        # Mask with background (e.g. ignore GT-label):
+        if foreground_mask is not None:
+            assert foreground_mask.shape == segmentation.shape
+            segmentation = segmentation.astype('int64')
+            segmentation = np.where(foreground_mask, segmentation, np.ones_like(segmentation)*(-1))
 
         if self.return_hmap:
             return segmentation, hmap

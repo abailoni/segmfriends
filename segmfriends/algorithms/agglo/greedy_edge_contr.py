@@ -152,29 +152,29 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
         If the opposite is passed, set option `invert_affinities == True`
         """
 
-        # ------------------------------------------
-        import vigra
-        # TODO: please move to the fragmenter!
-        pixel_segm = np.arange(np.prod(segmentation.shape), dtype='uint64').reshape(segmentation.shape) + segmentation.max()
-        # Full CREMI:
-        mask1 = (affinities[[0,1,2,4,5]] < 0.3).max(axis=0)
-        mask2 = (affinities[[7,8]] < 0.04).max(axis=0)
-        # Small noise experiments:
-        # mask1 = (affinities[[0, 1, 2, 4, 5]] < 0.6).max(axis=0)
-        # mask2 = (affinities[[7, 8, 10, 11]] < 0.2).max(axis=0)
-        affinities_mask = np.logical_or(mask1, mask2)
-        # affinities_mask = mask1
-        new_segmentation = np.where(affinities_mask, pixel_segm, segmentation)
-        new_segmentation = vigra.analysis.relabelConsecutive(new_segmentation)[0]
-        new_segmentation = vigra.analysis.labelVolume(new_segmentation.astype('uint32'))
-        print("Check new number of nodes!", new_segmentation.max())
-
+        # # ------------------------------------------
+        # import vigra
+        # # TODO: please move to the fragmenter!
+        # pixel_segm = np.arange(np.prod(segmentation.shape), dtype='uint64').reshape(segmentation.shape) + segmentation.max()
+        # # Full CREMI:
+        # mask1 = (affinities[[0,1,2,4,5]] < 0.3).max(axis=0)
+        # mask2 = (affinities[[7,8]] < 0.04).max(axis=0)
+        # # Small noise experiments:
+        # # mask1 = (affinities[[0, 1, 2, 4, 5]] < 0.6).max(axis=0)
+        # # mask2 = (affinities[[7, 8, 10, 11]] < 0.2).max(axis=0)
+        # affinities_mask = np.logical_or(mask1, mask2)
+        # # affinities_mask = mask1
+        # new_segmentation = np.where(affinities_mask, pixel_segm, segmentation)
+        # new_segmentation = vigra.analysis.relabelConsecutive(new_segmentation)[0]
+        # new_segmentation = vigra.analysis.labelVolume(new_segmentation.astype('uint32'))
+        # print("Check new number of nodes!", new_segmentation.max())
         #
-        # vigra.writeHDF5(new_segmentation.astype('uint64'), '/home/abailoni_local/hci_home/temp.h5', 'new_segm')
-
-        segmentation = new_segmentation
-        # vigra.writeHDF5(segmentation.astype('uint64'), '/home/abailoni_local/hci_home/temp.h5', 'segm')
-        # ------------------------------------------
+        # #
+        # # vigra.writeHDF5(new_segmentation.astype('uint64'), '/home/abailoni_local/hci_home/temp.h5', 'new_segm')
+        #
+        # segmentation = new_segmentation
+        # # vigra.writeHDF5(segmentation.astype('uint64'), '/home/abailoni_local/hci_home/temp.h5', 'segm')
+        # # ------------------------------------------
 
         tick = time.time()
         # TODO: I think I should really consider implementing the max and sum in the statistics...

@@ -99,6 +99,9 @@ b
 
     padding = [[0,0] for _ in range(3)]
     for ax in range(3):
+        # raise NotImplementedError("This is broken")
+        # padding[ax][0] = np.abs(offsets[:, ax].min())
+        # FIXME: there is something going wrong here because negative offsets are ignored in this step!
         padding[ax][1] = offsets[:,ax].max()
 
     if pad_mode == 'edge':
@@ -107,7 +110,7 @@ b
         padded_label_image = np.pad(label_image, pad_width=padding, mode=pad_mode, constant_values=pad_constant_values)
     else:
         raise NotImplementedError
-    crop_slices = [slice(0, padded_label_image.shape[ax]-padding[ax][1]) for ax in range(3)]
+    crop_slices = [slice(padding[ax][0], padded_label_image.shape[ax]-padding[ax][1]) for ax in range(3)]
 
     boundary_mask = []
     for offset in offsets:
