@@ -11,35 +11,53 @@ def build_lifted_graph_from_rag(rag,
                                 label_image,
                                 offsets, offset_probabilities=None,
                                 nb_offsets_direct_neighbors=3,
-                                number_of_threads=8):
-
+                                number_of_threads=8,
+                                has_background_label=False):
 
     if isinstance(offset_probabilities, np.ndarray):
         only_local = all(offset_probabilities == 0.)
     else:
         only_local = offset_probabilities == 0.
 
-    nb_local_edges = rag.numberOfEdges
-    if only_local:
-        return rag, np.ones((nb_local_edges, ), dtype='bool')
+    if not has_background_label:
+        nb_local_edges = rag.numberOfEdges
+        final_graph = rag
     else:
-        local_edges = rag.uvIds()
+        # Find edges not connected to the background:
+        edges = rag.uvIds()
+        background_label = rag.numberOfNodes - 1
+        valid_edges = edges[np.logical_and(edges[:,0] != background_label, edges[:,1] != background_label)]
 
+        # Construct new graph without the background:
+        new_graph = nifty.graph.undirectedGraph(rag.numberOfNodes - 1)
+        new_graph.insertEdges(valid_edges)
 
+        nb_local_edges = valid_edges.shape[0]
+        final_graph = new_graph
+
+    # nb_local_edges = rag.numberOfEdges
+    if only_local:
+        return final_graph, np.ones((nb_local_edges,), dtype='bool')
+    else:
+        if not has_background_label:
+            local_edges = rag.uvIds()
+            final_graph = nifty.graph.undirectedGraph(rag.numberOfNodes)
+            final_graph.insertEdges(local_edges)
+
+        # Find lifted edges:
         used_offsets = offsets[nb_offsets_direct_neighbors:]
-
         possibly_lifted_edges = ngraph.compute_lifted_edges_from_rag_and_offsets(rag,
                                                                                  label_image,
                                                   used_offsets,
                                                   offsets_probabilities=offset_probabilities,
                                                   number_of_threads=number_of_threads)
 
-        # print("Creating undirected graph..")
+        # Delete lifted edges connected to the background label:
+        if has_background_label:
+            possibly_lifted_edges = possibly_lifted_edges[np.logical_and(possibly_lifted_edges[:,0] != background_label, possibly_lifted_edges[:,1] != background_label)]
 
-        lifted_graph = nifty.graph.undirectedGraph(rag.numberOfNodes)
-        lifted_graph.insertEdges(local_edges)
-        lifted_graph.insertEdges(possibly_lifted_edges)
-        total_nb_edges = lifted_graph.numberOfEdges
+        final_graph.insertEdges(possibly_lifted_edges)
+        total_nb_edges = final_graph.numberOfEdges
 
         is_local_edge = np.zeros(total_nb_edges, dtype=np.int8)
         is_local_edge[:nb_local_edges] = 1
@@ -47,7 +65,7 @@ def build_lifted_graph_from_rag(rag,
         # print("Local edges:", nb_local_edges)
         # print("Lifted edges:", total_nb_edges - nb_local_edges)
 
-        return lifted_graph, is_local_edge
+        return final_graph, is_local_edge
 
 
 

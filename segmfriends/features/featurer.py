@@ -7,6 +7,24 @@ from ..features import accumulate_affinities_on_graph_edges
 from ..utils.graph import build_lifted_graph_from_rag
 import vigra
 
+def get_rag(segmentation):
+    # Check if the segmentation has a background label that should be ignored in the graph:
+    min_label = segmentation.min()
+    if min_label >=0:
+        return  nrag.gridRag(segmentation.astype(np.uint32)), False
+    else:
+        assert min_label == -1, "The only accepted background label is -1"
+        max_valid_label = segmentation.max()
+        assert max_valid_label >= 0, "A label image with only background label was passed!"
+        mod_segmentation = segmentation.copy()
+        background_mask = segmentation == min_label
+        mod_segmentation[background_mask] = max_valid_label + 1
+
+        # Build rag including background:
+        return nrag.gridRag(mod_segmentation.astype(np.uint32)), True
+
+
+
 
 class FeaturerLongRangeAffs(object):
     def __init__(self, offsets,
@@ -62,7 +80,9 @@ class FeaturerLongRangeAffs(object):
         if self.debug:
             print("Computing rag...")
             tick = time.time()
-        rag = nrag.gridRag(segmentation.astype(np.uint32))
+
+        # If there was a label -1, now its value in the rag is given by the maximum label (and it will be ignored later on)
+        rag, has_background_label = get_rag(segmentation)
 
         if self.debug:
             print("Took {} s!".format(time.time() - tick))
@@ -79,6 +99,7 @@ class FeaturerLongRangeAffs(object):
 
 
         # fake_data = np.empty(rag.shape, dtype='float32')
+        # FIXME: this won't work
         # out_dict['node_sizes'] = nrag.accumulateMeanAndLength(rag, fake_data)[1][:, 1]
 
         out_dict['node_sizes'] = None
@@ -93,7 +114,9 @@ class FeaturerLongRangeAffs(object):
             segmentation,
             offsets,
             offset_probabilities=self.offset_probabilities,
-            number_of_threads=self.n_threads)
+            number_of_threads=self.n_threads,
+            has_background_label=has_background_label
+        )
 
         # lifted_graph, is_local_edge, _, edge_sizes = build_pixel_lifted_graph_from_offsets(
         #     segmentation.shape,

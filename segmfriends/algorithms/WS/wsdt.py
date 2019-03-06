@@ -119,23 +119,23 @@ class IntersectWithBoundaryPixels(object):
         new_segmentation = np.where(boundary_mask, pixel_segm, segmentation)
         new_segmentation = vigra.analysis.relabelConsecutive(new_segmentation)[0]
         new_segmentation = vigra.analysis.labelVolume(new_segmentation.astype('uint32'))
-        print("Check new number of nodes!", new_segmentation.max())
+        # print("Check new number of nodes!", new_segmentation.max())
 
-        from ... import vis as vis
-        import matplotlib.pyplot as plt
-
-        fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(7, 7))
-        for a in fig.get_axes():
-            a.axis('off')
-
-        # affs_repr = np.linalg.norm(affs_repr, axis=-1)
-        # ax.imshow(affs_repr, interpolation="none")
-
-        vis.plot_gray_image(ax[0], hmap, z_slice=1)
-        vis.plot_segm(ax[1], new_segmentation, z_slice=1, highlight_boundaries=False)
-
-        pdf_path = "./hmap.pdf"
-        fig.savefig(pdf_path)
+        # from ... import vis as vis
+        # import matplotlib.pyplot as plt
+        #
+        # fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(7, 7))
+        # for a in fig.get_axes():
+        #     a.axis('off')
+        #
+        # # affs_repr = np.linalg.norm(affs_repr, axis=-1)
+        # # ax.imshow(affs_repr, interpolation="none")
+        #
+        # vis.plot_gray_image(ax[0], hmap, z_slice=1)
+        # vis.plot_segm(ax[1], new_segmentation, z_slice=1, highlight_boundaries=False)
+        #
+        # pdf_path = "./hmap.pdf"
+        # fig.savefig(pdf_path)
 
 
         return new_segmentation
@@ -176,11 +176,15 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
 
 
 
-    def __call__(self, affinities, foreground_mask=None):
+    def __call__(self, *inputs):
         """
         Here we expect real affinities (1: merge, 0: split).
         If the opposite is passed, set option `invert_affinities == True`
         """
+        assert len(inputs) == 1 or len(inputs) == 2
+        affinities = inputs[0]
+        foreground_mask = inputs[1] if len(inputs) == 2 else None
+
         assert affinities.shape[0] == len(self.offsets)
         assert affinities.ndim == 4
 
