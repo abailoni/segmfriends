@@ -329,13 +329,15 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         # new_aff[is_local_edge][new_aff[is_local_edge] < 0.5] = 0.5
         # new_aff[is_long_range_edge][new_aff[is_long_range_edge] > 0.5] = 0.5
 
-        log_costs = probs_to_costs(1 - edge_weights, beta=0.5)
+        threshold = self.extra_aggl_kwargs.get('threshold', 0.5)
+
+        log_costs = probs_to_costs(1 - edge_weights, beta=threshold)
         log_costs = log_costs * edge_sizes / edge_sizes.max()
 
         if self.use_log_costs:
             signed_weights = log_costs
         else:
-            signed_weights = edge_weights - 0.5
+            signed_weights = edge_weights - threshold
 
         ignored_edge_weights = None
         if self.impose_local_attraction:
@@ -417,7 +419,7 @@ def runGreedyGraphEdgeContraction(
     every edge.
     """
 
-    if update_rule == 'max':
+    if update_rule == 'max' and False:
         assert not return_UCM
         # In this case we use the efficient MWS clustering implementation in affogato:
         nb_nodes = graph.numberOfNodes
