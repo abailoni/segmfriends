@@ -10,7 +10,7 @@ from ..transform.segm_to_bound import compute_boundary_mask_from_label_image
 
 
 # Build random color map:
-__MAX_LABEL__ = 1000000
+__MAX_LABEL__ = 100000000
 rand_cm = matplotlib.colors.ListedColormap(np.random.rand(__MAX_LABEL__, 3))
 
 

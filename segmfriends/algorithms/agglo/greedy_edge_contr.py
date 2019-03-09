@@ -158,30 +158,6 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
         If the opposite is passed, set option `invert_affinities == True`
         """
 
-        # # ------------------------------------------
-        # import vigra
-        # # TODO: please move to the fragmenter!
-        # pixel_segm = np.arange(np.prod(segmentation.shape), dtype='uint64').reshape(segmentation.shape) + segmentation.max()
-        # # Full CREMI:
-        # mask1 = (affinities[[0,1,2,4,5]] < 0.3).max(axis=0)
-        # mask2 = (affinities[[7,8]] < 0.04).max(axis=0)
-        # # Small noise experiments:
-        # # mask1 = (affinities[[0, 1, 2, 4, 5]] < 0.6).max(axis=0)
-        # # mask2 = (affinities[[7, 8, 10, 11]] < 0.2).max(axis=0)
-        # affinities_mask = np.logical_or(mask1, mask2)
-        # # affinities_mask = mask1
-        # new_segmentation = np.where(affinities_mask, pixel_segm, segmentation)
-        # new_segmentation = vigra.analysis.relabelConsecutive(new_segmentation)[0]
-        # new_segmentation = vigra.analysis.labelVolume(new_segmentation.astype('uint32'))
-        # print("Check new number of nodes!", new_segmentation.max())
-        #
-        # #
-        # # vigra.writeHDF5(new_segmentation.astype('uint64'), '/home/abailoni_local/hci_home/temp.h5', 'new_segm')
-        #
-        # segmentation = new_segmentation
-        # # vigra.writeHDF5(segmentation.astype('uint64'), '/home/abailoni_local/hci_home/temp.h5', 'segm')
-        # # ------------------------------------------
-
         tick = time.time()
         # TODO: I think I should really consider implementing the max and sum in the statistics...
         featurer_outputs = self.featurer(affinities, segmentation)
@@ -225,7 +201,7 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
                                           node_sizes=node_sizes,
                                           is_merge_edge=is_local_edge,
                                           return_UCM=self.return_UCM,
-                                          return_agglomeration_data=True,
+                                          return_agglomeration_data=False,
                                           **self.extra_aggl_kwargs,
                                           **self.extra_runAggl_kwargs)
 
@@ -233,11 +209,17 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
             print("Took {} s!".format(out_dict["runtime"]))
             print("Getting final segm...")
 
+        # ignore_mask = segmentation == -1
         final_segm = mappings.map_features_to_label_array(
             segmentation,
             np.expand_dims(node_labels, axis=-1),
-            number_of_threads=self.n_threads
+            number_of_threads=self.n_threads,
+            fill_value=-1.,
+            ignore_label=-1,
         )[..., 0]
+        # Increase by one, so ignore label becomes 0:
+        final_segm += 1
+
 
         # Compute MC energy:
         edge_labels = graph.nodesLabelsToEdgeLabels(node_labels)
@@ -373,7 +355,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
                                           edge_sizes=edge_sizes,
                                           is_merge_edge=is_local_edge,
                                          return_UCM=self.return_UCM,
-                                          return_agglomeration_data=True,
+                                          return_agglomeration_data=False,
                                           ignored_edge_weights=ignored_edge_weights,
                                           **self.extra_aggl_kwargs)
 
@@ -396,6 +378,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
             print("MC energy: {}".format(MC_energy))
             print("Agglomerated in {} s".format(out_dict['runtime']))
 
+        # TODO: map ignore label -1 to 0!
         segmentation = nodeSeg.reshape(image_shape)
 
         out_dict['MC_energy'] = MC_energy
@@ -426,7 +409,7 @@ def runGreedyGraphEdgeContraction(
     every edge.
     """
 
-    if update_rule == 'MutexWatershed' and False:
+    if update_rule == 'MutexWatershed':
         assert not return_UCM
         # In this case we use the efficient MWS clustering implementation in affogato:
         nb_nodes = graph.numberOfNodes

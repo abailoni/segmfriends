@@ -111,28 +111,35 @@ class IntersectWithBoundaryPixels(object):
         self.offset_weights = offset_weights
         self.boundary_threshold = boundary_threshold
 
-    def __call__(self, affinities, segmentation):
+    def __call__(self, affinities, dtws_segm):
         hmap = from_affinities_to_hmap(affinities, self.offsets, self.used_offsets,
                                        self.offset_weights)
-        pixel_segm = np.arange(np.prod(segmentation.shape), dtype='uint64').reshape(segmentation.shape) + segmentation.max()
+        pixel_segm = np.arange(np.prod(dtws_segm.shape), dtype='uint64').reshape(dtws_segm.shape) + dtws_segm.max()
         boundary_mask = (1.-hmap) < self.boundary_threshold
-        new_segmentation = np.where(boundary_mask, pixel_segm, segmentation)
+
+        print("Relabel volume")
+        dtws_segm = vigra.analysis.labelVolume((dtws_segm * np.logical_not(boundary_mask)).astype('uint32'))
+
+        new_segmentation = np.where(boundary_mask, pixel_segm, dtws_segm)
+        print("Relabel consecutive")
         new_segmentation = vigra.analysis.relabelConsecutive(new_segmentation)[0]
-        new_segmentation = vigra.analysis.labelVolume(new_segmentation.astype('uint32'))
-        # print("Check new number of nodes!", new_segmentation.max())
+
+        print("Check new number of nodes!", new_segmentation.max())
 
         # from ... import vis as vis
         # import matplotlib.pyplot as plt
         #
-        # fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(7, 7))
+        # fig, ax = plt.subplots(ncols=2, nrows=2, figsize=(7, 7))
         # for a in fig.get_axes():
         #     a.axis('off')
         #
         # # affs_repr = np.linalg.norm(affs_repr, axis=-1)
         # # ax.imshow(affs_repr, interpolation="none")
         #
-        # vis.plot_gray_image(ax[0], hmap, z_slice=1)
-        # vis.plot_segm(ax[1], new_segmentation, z_slice=1, highlight_boundaries=False)
+        # vis.plot_gray_image(ax[0,0], hmap, z_slice=1)
+        # vis.plot_gray_image(ax[0, 1], boundary_mask.astype('float32'), z_slice=1)
+        # vis.plot_segm(ax[1,0], new_segmentation, z_slice=1, highlight_boundaries=False)
+        # vis.plot_segm(ax[1, 1], pixel_segm, z_slice=1, highlight_boundaries=False)
         #
         # pdf_path = "./hmap.pdf"
         # fig.savefig(pdf_path)
@@ -205,6 +212,28 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
             assert foreground_mask.shape == segmentation.shape
             segmentation = segmentation.astype('int64')
             segmentation = np.where(foreground_mask, segmentation, np.ones_like(segmentation)*(-1))
+
+        if segmentation.max() > np.uint32(-1):
+            print("!!!!!!!!!WARNING!!!!!!!!!! uint32 limit reached!")
+
+
+        # from ... import vis as vis
+        # import matplotlib.pyplot as plt
+        #
+        # fig, ax = plt.subplots(ncols=3, nrows=1, figsize=(7, 7))
+        # for a in fig.get_axes():
+        #     a.axis('off')
+        #
+        # # affs_repr = np.linalg.norm(affs_repr, axis=-1)
+        # # ax.imshow(affs_repr, interpolation="none")
+        #
+        # vis.plot_segm(ax[0], dtws, z_slice=1)
+        # vis.plot_segm(ax[1], intersect, z_slice=1, highlight_boundaries=False)
+        # vis.plot_segm(ax[2], segmentation, z_slice=1, highlight_boundaries=False)
+        #
+        # pdf_path = "./wsdt.pdf"
+        # fig.savefig(pdf_path)
+
 
         if self.return_hmap:
             return segmentation, hmap
