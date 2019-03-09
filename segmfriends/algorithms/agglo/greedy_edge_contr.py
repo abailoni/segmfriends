@@ -27,6 +27,7 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
                  return_UCM=False,
                  nb_merge_offsets=3,
                  debug=False,
+                 random_edge_probabilities=None,
                  **super_kwargs):
         """
         If a fragmenter is passed (DTWS, SLIC, etc...) then the agglomeration is done
@@ -53,7 +54,8 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
                 extra_runAggl_kwargs=extra_runAggl_kwargs,
                 nb_merge_offsets=nb_merge_offsets,
                 return_UCM=return_UCM,
-                debug=debug
+                debug=debug,
+                random_edge_probabilities=random_edge_probabilities
             )
             super(GreedyEdgeContractionClustering, self).__init__(fragmenter, agglomerater, **super_kwargs)
         else:
@@ -69,7 +71,8 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
                 nb_merge_offsets=nb_merge_offsets,
                 strides=strides,
                 return_UCM=return_UCM,
-                debug=debug
+                debug=debug,
+                random_edge_probabilities=random_edge_probabilities
             )
             super(GreedyEdgeContractionClustering, self).__init__(agglomerater, **super_kwargs)
 
@@ -86,6 +89,7 @@ class GreedyEdgeContractionAgglomeraterBase(object):
                  debug=True,
                  return_UCM=False,
                  offsets_probabilities=None,
+                 random_edge_probabilities=None,
                  ):
         """
                 Starts from pixels.
@@ -93,6 +97,7 @@ class GreedyEdgeContractionAgglomeraterBase(object):
                 Examples of accepted update rules:
 
                  - 'mean'
+                 - 'MutexWatershed'
                  - 'max'
                  - 'min'
                  - 'sum'
@@ -121,6 +126,7 @@ class GreedyEdgeContractionAgglomeraterBase(object):
         self.extra_aggl_kwargs = extra_aggl_kwargs if extra_aggl_kwargs is not None else {}
         self.use_log_costs = self.extra_aggl_kwargs.pop('use_log_costs', False)
         self.extra_runAggl_kwargs = extra_runAggl_kwargs if extra_runAggl_kwargs is not None else {}
+        self.random_edge_probabilities = random_edge_probabilities
 
 
 class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAgglomeraterBase):
@@ -310,7 +316,8 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
                 offsets_probabilities=offset_probabilities,
                 offsets_weights=offsets_weights,
                 nb_local_offsets=self.nb_merge_offsets,
-                strides=self.strides
+                strides=self.strides,
+                random_edge_probabilities=self.random_edge_probabilities
             )
 
         # Build policy:
@@ -419,7 +426,7 @@ def runGreedyGraphEdgeContraction(
     every edge.
     """
 
-    if update_rule == 'max' and False:
+    if update_rule == 'MutexWatershed' and False:
         assert not return_UCM
         # In this case we use the efficient MWS clustering implementation in affogato:
         nb_nodes = graph.numberOfNodes

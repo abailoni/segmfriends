@@ -1,7 +1,22 @@
 import numpy as np
 import yaml
 from numba import njit
+from itertools import repeat
+import os
 
+def starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
+    """
+    Wrapper around pool.starmap accepting args_iter and kwargs_iter. Example of usage:
+
+        args_iter = zip(repeat(project_name), api_extensions)
+        kwargs_iter = repeat(dict(payload={'a': 1}, key=True))
+        branches = starmap_with_kwargs(pool, fetch_api, args_iter, kwargs_iter)
+    """
+    args_for_starmap = zip(repeat(fn), args_iter, kwargs_iter)
+    return pool.starmap(apply_args_and_kwargs, args_for_starmap)
+
+def apply_args_and_kwargs(fn, args, kwargs):
+    return fn(*args, **kwargs)
 
 def cantor_pairing_fct(int1, int2):
     """
@@ -62,4 +77,9 @@ def yaml2dict(path):
         readict = yaml.load(f)
     return readict
 
-
+def check_dir_and_create(directory):
+  '''
+  if the directory does not exist, create it
+  '''
+  if not os.path.exists(directory):
+    os.makedirs(directory)

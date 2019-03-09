@@ -77,7 +77,8 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
                                           offsets_weights=None,
                                           strides=None,
                                           nb_local_offsets=3,
-                                          downscaling_factor=None):
+                                          downscaling_factor=None,
+                                          random_edge_probabilities=None):
     # TODO: why label_image...?
     """
     :param offsets: At the moment local offsets should be the first ones
@@ -103,7 +104,8 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
     graph = ngraph.undirectedLongRangeGridGraph(image_shape, offsets, is_local_offset,
                         offsets_probabilities=offsets_probabilities,
                         labels=label_image,
-                                         strides=strides)
+                                         strides=strides,
+                                                random_probabilities=random_edge_probabilities)
     nb_nodes = graph.numberOfNodes
     # print(label_image)
     # print(is_local_offset)
