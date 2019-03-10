@@ -12,7 +12,8 @@ def build_lifted_graph_from_rag(rag,
                                 offsets, offset_probabilities=None,
                                 nb_offsets_direct_neighbors=3,
                                 number_of_threads=8,
-                                has_background_label=False):
+                                has_background_label=False,
+                                mask_used_edges=None):
 
     if isinstance(offset_probabilities, np.ndarray):
         only_local = all(offset_probabilities == 0.)
@@ -50,7 +51,8 @@ def build_lifted_graph_from_rag(rag,
                                                                                  label_image,
                                                   used_offsets,
                                                   offsets_probabilities=offset_probabilities,
-                                                  number_of_threads=number_of_threads)
+                                                  number_of_threads=number_of_threads,
+                                                                                 mask_used_edges=mask_used_edges)
 
         # Delete lifted edges connected to the background label:
         if has_background_label:
@@ -78,7 +80,7 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
                                           strides=None,
                                           nb_local_offsets=3,
                                           downscaling_factor=None,
-                                          random_edge_probabilities=None):
+                                          mask_used_edges=None):
     # TODO: why label_image...?
     """
     :param offsets: At the moment local offsets should be the first ones
@@ -105,7 +107,7 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
                         offsets_probabilities=offsets_probabilities,
                         labels=label_image,
                                          strides=strides,
-                                                random_probabilities=random_edge_probabilities)
+                                                mask_used_edges=mask_used_edges)
     nb_nodes = graph.numberOfNodes
     # print(label_image)
     # print(is_local_offset)

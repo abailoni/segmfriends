@@ -27,7 +27,7 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
                  return_UCM=False,
                  nb_merge_offsets=3,
                  debug=False,
-                 random_edge_probabilities=None,
+                 mask_used_edges=None,
                  **super_kwargs):
         """
         If a fragmenter is passed (DTWS, SLIC, etc...) then the agglomeration is done
@@ -55,7 +55,7 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
                 nb_merge_offsets=nb_merge_offsets,
                 return_UCM=return_UCM,
                 debug=debug,
-                random_edge_probabilities=random_edge_probabilities
+                mask_used_edges=mask_used_edges
             )
             super(GreedyEdgeContractionClustering, self).__init__(fragmenter, agglomerater, **super_kwargs)
         else:
@@ -72,7 +72,7 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
                 strides=strides,
                 return_UCM=return_UCM,
                 debug=debug,
-                random_edge_probabilities=random_edge_probabilities
+                mask_used_edges=mask_used_edges
             )
             super(GreedyEdgeContractionClustering, self).__init__(agglomerater, **super_kwargs)
 
@@ -89,7 +89,7 @@ class GreedyEdgeContractionAgglomeraterBase(object):
                  debug=True,
                  return_UCM=False,
                  offsets_probabilities=None,
-                 random_edge_probabilities=None,
+                 mask_used_edges=None,
                  ):
         """
                 Starts from pixels.
@@ -126,7 +126,7 @@ class GreedyEdgeContractionAgglomeraterBase(object):
         self.extra_aggl_kwargs = extra_aggl_kwargs if extra_aggl_kwargs is not None else {}
         self.use_log_costs = self.extra_aggl_kwargs.pop('use_log_costs', False)
         self.extra_runAggl_kwargs = extra_runAggl_kwargs if extra_runAggl_kwargs is not None else {}
-        self.random_edge_probabilities = random_edge_probabilities
+        self.mask_used_edges = mask_used_edges
 
 
 class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAgglomeraterBase):
@@ -148,7 +148,8 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
                                               self.invert_affinities,
                                               statistic='mean',
                                               offset_probabilities=self.offset_probabilities,
-                                              return_dict=True)
+                                              return_dict=True,
+                                              mask_used_edges=self.mask_used_edges)
 
 
 
@@ -299,7 +300,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
                 offsets_weights=offsets_weights,
                 nb_local_offsets=self.nb_merge_offsets,
                 strides=self.strides,
-                random_edge_probabilities=self.random_edge_probabilities
+                mask_used_edges=self.mask_used_edges
             )
 
         # Build policy:
