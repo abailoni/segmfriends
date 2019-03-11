@@ -18,7 +18,8 @@ class SizeThreshAndGrowWithWS(object):
                  hmap_kwargs=None,
                  apply_WS_growing=True,
                  size_of_2d_slices=False,
-                 debug=True):
+                 debug=False,
+                 with_background=False):
         """
         :param apply_WS_growing: if False, then the 'seed_mask' is returned
         :param size_of_2d_slices: compute size for all z-slices (memory efficient)
@@ -30,6 +31,7 @@ class SizeThreshAndGrowWithWS(object):
         self.apply_WS_growing = apply_WS_growing
         self.debug = debug
         self.size_of_2d_slices = size_of_2d_slices
+        self.with_background = with_background
 
     def __call__(self, affinities, label_image):
         assert len(self.offsets) == affinities.shape[0], "Affinities does not match offsets"
@@ -57,9 +59,15 @@ class SizeThreshAndGrowWithWS(object):
                                                           ['Count'],
                                                           map_to_image=True
                 ).squeeze()
+                print(z, flush=True, end=" ")
 
         sizeMask = sizeMap > self.size_threshold
         seeds = ((label_image+1)*sizeMask).astype(np.uint32)
+
+        background_mask = None
+        if self.with_background:
+            background_mask = label_image == 0
+            seeds[background_mask] = 0
 
         if not self.apply_WS_growing:
             return seeds
@@ -71,5 +79,11 @@ class SizeThreshAndGrowWithWS(object):
             for z in range(hmap.shape[0]):
                 watershedResult[z], _ = vigra.analysis.watershedsNew(hmap[z], seeds=seeds[z],
                                                                      method='RegionGrowing')
+                if self.with_background:
+                    watershedResult[z][background_mask[z]] = 0
             # Re-normalize indices numbers:
-            return vigra.analysis.labelVolume(watershedResult.astype(np.uint32))
+
+            if self.with_background:
+                return vigra.analysis.labelVolumeWithBackground(watershedResult.astype(np.uint32))
+            else:
+                return vigra.analysis.labelVolume(watershedResult.astype(np.uint32))

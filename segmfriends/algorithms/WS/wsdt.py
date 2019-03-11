@@ -112,19 +112,20 @@ class IntersectWithBoundaryPixels(object):
         self.boundary_threshold = boundary_threshold
 
     def __call__(self, affinities, dtws_segm):
+        # print("FInd hmap")
         hmap = from_affinities_to_hmap(affinities, self.offsets, self.used_offsets,
                                        self.offset_weights)
         pixel_segm = np.arange(np.prod(dtws_segm.shape), dtype='uint64').reshape(dtws_segm.shape) + dtws_segm.max()
         boundary_mask = (1.-hmap) < self.boundary_threshold
 
-        print("Relabel volume")
+        # print("Relabel volume")
         dtws_segm = vigra.analysis.labelVolume((dtws_segm * np.logical_not(boundary_mask)).astype('uint32'))
 
         new_segmentation = np.where(boundary_mask, pixel_segm, dtws_segm)
-        print("Relabel consecutive")
+        # print("Relabel consecutive")
         new_segmentation = vigra.analysis.relabelConsecutive(new_segmentation)[0]
 
-        print("Check new number of nodes!", new_segmentation.max())
+        # print("Check new number of nodes!", new_segmentation.max())
 
         # from ... import vis as vis
         # import matplotlib.pyplot as plt
@@ -198,9 +199,10 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
         if self.invert_affinities:
             affinities = 1. - affinities
 
+        # print("Predict hmap")
         hmap = from_affinities_to_hmap(affinities, self.offsets, self.used_offsets,
                                 self.offset_weights)
-
+        # print("Run WSDT")
         segmentation = super(WatershedOnDistanceTransformFromAffinities, self).__call__(hmap)
 
         # Intersect with boundary pixels:

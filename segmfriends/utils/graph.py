@@ -46,7 +46,9 @@ def build_lifted_graph_from_rag(rag,
             final_graph.insertEdges(local_edges)
 
         # Find lifted edges:
-        used_offsets = offsets[nb_offsets_direct_neighbors:]
+        # TODO: take out local neighbors
+        # used_offsets = offsets[nb_offsets_direct_neighbors:]
+        used_offsets = offsets
         possibly_lifted_edges = ngraph.compute_lifted_edges_from_rag_and_offsets(rag,
                                                                                  label_image,
                                                   used_offsets,
