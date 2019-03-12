@@ -147,6 +147,12 @@ def set_log_tics(ax, sub_range, sub_ticks, format = "%.2f", axis='x'):
         # force 'autoscale'
         #####################################################
         yd = []  # matrix of y values from all lines on plot
+        # cs = ax.collections[0]
+        # cs.set_offset_position('data')
+        # offs = cs.get_offsets()
+        #
+        # for n in range(len(offs)):
+        #     yd.append(offs[n, 1])
         for n in range(len(plt.gca().get_lines())):
             line = plt.gca().get_lines()[n]
             yd.append((line.get_ydata()).tolist())

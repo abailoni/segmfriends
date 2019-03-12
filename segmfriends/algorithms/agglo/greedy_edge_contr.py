@@ -10,7 +10,7 @@ from ..segm_pipeline import SegmentationPipeline
 from ...features.utils import probs_to_costs
 from ...transform.segm_to_bound import compute_mask_boundaries_graph
 
-from affogato.segmentation import compute_mws_clustering
+from affogato.segmentation import compute_mws_clustering, compute_single_linkage_clustering
 
 import time
 
@@ -410,7 +410,8 @@ def runGreedyGraphEdgeContraction(
     every edge.
     """
 
-    if update_rule == 'MutexWatershed':
+    if update_rule == 'MutexWatershed' or (update_rule == 'max' and not add_cannot_link_constraints):
+    # if update_rule == 'MutexWatershed' and False:
         assert not return_UCM
         # In this case we use the efficient MWS clustering implementation in affogato:
         nb_nodes = graph.numberOfNodes
@@ -424,11 +425,18 @@ def runGreedyGraphEdgeContraction(
 
         tick = time.time()
         # This function will sort the edges in ascending order, so we transform all the edges to negative values
-        nodeSeg = compute_mws_clustering(nb_nodes,
-                               uv_ids[np.logical_not(mutex_edges)],
-                               uv_ids[mutex_edges],
-                               signed_edge_weights[np.logical_not(mutex_edges)],
-                               -signed_edge_weights[mutex_edges])
+        if update_rule == 'MutexWatershed':
+            nodeSeg = compute_mws_clustering(nb_nodes,
+                                   uv_ids[np.logical_not(mutex_edges)],
+                                   uv_ids[mutex_edges],
+                                   signed_edge_weights[np.logical_not(mutex_edges)],
+                                   -signed_edge_weights[mutex_edges])
+        else:
+            nodeSeg = compute_single_linkage_clustering(nb_nodes,
+                                             uv_ids[np.logical_not(mutex_edges)],
+                                             uv_ids[mutex_edges],
+                                             signed_edge_weights[np.logical_not(mutex_edges)],
+                                             -signed_edge_weights[mutex_edges])
         runtime = time.time() - tick
         out_dict = {'runtime': runtime}
 
