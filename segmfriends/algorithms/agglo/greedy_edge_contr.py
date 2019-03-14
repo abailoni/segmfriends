@@ -1,6 +1,7 @@
 from nifty.graph import rag as nrag
 import nifty.graph.agglo as nagglo
 import numpy as np
+from copy import deepcopy
 
 from ...features import mappings
 from ...features import vigra_feat
@@ -123,7 +124,7 @@ class GreedyEdgeContractionAgglomeraterBase(object):
         self.invert_affinities = invert_affinities
         self.offset_probabilities = offsets_probabilities
         self.nb_merge_offsets = nb_merge_offsets
-        self.extra_aggl_kwargs = extra_aggl_kwargs if extra_aggl_kwargs is not None else {}
+        self.extra_aggl_kwargs = deepcopy(extra_aggl_kwargs) if extra_aggl_kwargs is not None else {}
         self.use_log_costs = self.extra_aggl_kwargs.pop('use_log_costs', False)
         self.extra_runAggl_kwargs = extra_runAggl_kwargs if extra_runAggl_kwargs is not None else {}
         self.mask_used_edges = mask_used_edges
