@@ -39,7 +39,8 @@ def get_masked_boundary_mask(segm):
     bound = get_bound_mask(segm)
     return mask_the_mask(bound)
 
-def plot_segm(target, segm, z_slice=0, background=None, mask_value=None, highlight_boundaries=True, plot_label_colors=True):
+def plot_segm(target, segm, z_slice=0, background=None, mask_value=None, highlight_boundaries=True, plot_label_colors=True,
+              alpha_labels=0.4):
     """Shape of expected background: (z,x,y)"""
     if background is not None:
         target.matshow(background[z_slice], cmap='gray', interpolation=DEF_INTERP)
@@ -47,7 +48,7 @@ def plot_segm(target, segm, z_slice=0, background=None, mask_value=None, highlig
     if mask_value is not None:
         segm = mask_the_mask(segm,value_to_mask=mask_value)
     if plot_label_colors:
-        target.matshow(segm[z_slice], cmap=rand_cm, alpha=0.4, interpolation=DEF_INTERP, **segm_plot_kwargs)
+        target.matshow(segm[z_slice], cmap=rand_cm, alpha=alpha_labels, interpolation=DEF_INTERP, **segm_plot_kwargs)
     masked_bound = get_masked_boundary_mask(segm)
     if highlight_boundaries:
         target.matshow(masked_bound[z_slice], cmap='gray', alpha=0.6, interpolation=DEF_INTERP)
