@@ -1,6 +1,8 @@
 from .various import yaml2dict
+from copy import deepcopy
 
 def recursive_dict_update(source, target):
+    target = deepcopy(target)
     for key, value in source.items():
         if isinstance(value, dict):
             sub_target = target[key] if key in target else {}
