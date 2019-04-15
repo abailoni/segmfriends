@@ -139,9 +139,8 @@ class FeaturerLongRangeAffs(object):
         edge_indicators, edge_sizes = \
             accumulate_affinities_on_graph_edges(
                 affinities, offsets,
-                graph=lifted_graph,
                 label_image=segmentation,
-                use_undirected_graph=True,
+                graph=lifted_graph,
                 mode=self.statistic,
                 offsets_weights=offsets_weights,
                 number_of_threads=self.n_threads)
