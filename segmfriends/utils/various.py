@@ -1,6 +1,6 @@
 import numpy as np
 import yaml
-from numba import njit
+# from numba import njit
 from itertools import repeat
 import os
 
@@ -29,7 +29,7 @@ def cantor_pairing_fct(int1, int2):
     return np.floor_divide((int1 + int2) * (int1 + int2 + 1), np.array(2, dtype='uint64')) + int2
     # return (int1 + int2) * (int1 + int2 + 1) / 2 + int2
 
-@njit
+# @njit
 def find_first_index(array, item):
     for idx, val in np.ndenumerate(array):
         if val == item:
