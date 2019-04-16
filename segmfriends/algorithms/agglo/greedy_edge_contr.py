@@ -154,7 +154,9 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
 
 
 
-    def __call__(self, affinities, segmentation):
+    def __call__(self, affinities, segmentation, previous_uv_ids=None,
+                                     previous_edge_weights=None,
+                                     previous_edge_sizes=None):
         """
         Here we expect real affinities (1: merge, 0: split).
         If the opposite is passed, set option `invert_affinities == True`
@@ -170,13 +172,32 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
             # merge_prio = featurer_outputs['merge_prio']
             # not_merge_prio = featurer_outputs['not_merge_prio']
 
-
         # FIXME: set edge_sizes to rag!!!
         edge_indicators = featurer_outputs['edge_indicators']
         edge_sizes = featurer_outputs['edge_sizes']
         node_sizes = featurer_outputs['node_sizes']
         is_local_edge = featurer_outputs['is_local_edge']
 
+
+        if previous_uv_ids is not None:
+            assert previous_edge_weights is not None
+            previous_edge_sizes = np.ones_like(previous_edge_weights) if previous_edge_sizes is None else previous_edge_sizes
+            assert previous_edge_sizes.shape == previous_edge_weights.shape
+            assert previous_edge_sizes.shape[0] == previous_uv_ids.shape[0]
+
+            uvIds = graph.uvIds()
+            uvIds = np.sort(uvIds, axis=1)
+            previous_uv_ids = np.sort(previous_uv_ids, axis=1)
+
+            from ...utils.various import cantor_pairing_fct, search_sorted
+            edge_indices = search_sorted(cantor_pairing_fct(uvIds[:, 0], uvIds[:, 1]),
+                          cantor_pairing_fct(previous_uv_ids[:,0], previous_uv_ids[:,1]))
+            assert np.ma.count_masked(edge_indices) == 0
+            assert edge_indices.shape[0] == previous_edge_weights.shape[0]
+
+            # Replace the previously computed edge weights and sizes:
+            edge_indicators[edge_indices] = previous_edge_weights
+            edge_sizes[edge_indices] = previous_edge_sizes
 
 
         if self.debug:
@@ -185,13 +206,15 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
             tick = time.time()
 
 
-        log_costs = probs_to_costs(1 - edge_indicators, beta=0.5)
+        threshold = self.extra_aggl_kwargs.pop('threshold', 0.5)
+
+        log_costs = probs_to_costs(1 - edge_indicators, beta=threshold)
         # FIXME: CAREFUL! Here we are changing the costs depending on the edge size! Sum or average will give really different results...
         # log_costs = log_costs * edge_sizes / edge_sizes.max()
         if self.use_log_costs:
             signed_weights = log_costs
         else:
-            signed_weights = edge_indicators - 0.5
+            signed_weights = edge_indicators - threshold
 
         if self.debug:
             print("Took {} s!".format(time.time() - tick))
@@ -320,7 +343,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         # new_aff[is_local_edge][new_aff[is_local_edge] < 0.5] = 0.5
         # new_aff[is_long_range_edge][new_aff[is_long_range_edge] > 0.5] = 0.5
 
-        threshold = self.extra_aggl_kwargs.get('threshold', 0.5)
+        threshold = self.extra_aggl_kwargs.pop('threshold', 0.5)
 
         log_costs = probs_to_costs(1 - edge_weights, beta=threshold)
         log_costs = log_costs * edge_sizes / edge_sizes.max()
@@ -391,7 +414,6 @@ def runGreedyGraphEdgeContraction(
                           graph,
                           signed_edge_weights,
                           update_rule = 'mean',
-                          threshold = 0.5,
                           add_cannot_link_constraints= False,
                           edge_sizes = None,
                           node_sizes = None,
@@ -400,8 +422,6 @@ def runGreedyGraphEdgeContraction(
                           return_UCM = False,
                           return_agglomeration_data=False,
                           ignored_edge_weights = None,
-                          remove_small_segments = False,
-                          small_segments_thresh = 10,
                           **run_kwargs):
     """
     :param ignored_edge_weights: boolean array, if an edge label is True, than the passed signed weight is ignored
@@ -451,14 +471,11 @@ def runGreedyGraphEdgeContraction(
         cluster_policy = nagglo.greedyGraphEdgeContraction(graph, signed_edge_weights,
                                                                edge_sizes=edge_sizes,
                                                                update_rule=update_rule,
-                                                               threshold=threshold,
                                                                add_cannot_link_constraints=add_cannot_link_constraints,
                                                                node_sizes=node_sizes,
                                                                is_merge_edge=is_merge_edge,
                                                                size_regularizer=size_regularizer,
                                                                ignored_edge_weights=ignored_edge_weights,
-                                                                remove_small_segments=remove_small_segments,
-                                                                small_segments_thresh=small_segments_thresh
                                                                )
         agglomerativeClustering = nagglo.agglomerativeClustering(cluster_policy)
 
