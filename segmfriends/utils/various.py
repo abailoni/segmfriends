@@ -18,6 +18,20 @@ def starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
 def apply_args_and_kwargs(fn, args, kwargs):
     return fn(*args, **kwargs)
 
+
+def search_sorted(array, keys_to_search):
+    """
+    Return the indices of the keys in array. If not found than the indices are masked.
+    """
+    index = np.argsort(array)
+    sorted_x = array[index]
+    sorted_index = np.searchsorted(sorted_x, keys_to_search)
+
+    yindex = np.take(index, sorted_index, mode="clip")
+    mask = array[yindex] != keys_to_search
+
+    return np.ma.array(yindex, mask=mask)
+
 def cantor_pairing_fct(int1, int2):
     """
     Remarks:
@@ -74,7 +88,7 @@ def yaml2dict(path):
         # Forgivable mistake that path is a dict already
         return path
     with open(path, 'r') as f:
-        readict = yaml.load(f)
+        readict = yaml.load(f, Loader=yaml.FullLoader)
     return readict
 
 def check_dir_and_create(directory):
@@ -83,3 +97,18 @@ def check_dir_and_create(directory):
   '''
   if not os.path.exists(directory):
     os.makedirs(directory)
+
+
+def compute_output_size_transp_conv(input_size,
+                                    padding=0,
+                                    stride=1,
+                                    dilation=1,
+                                    kernel_size=3):
+    return (input_size-1)*stride -2*padding + dilation*(kernel_size-1) + 1
+
+def compute_output_size_conv(input_size,
+                                    padding=0,
+                                    stride=1,
+                                    dilation=1,
+                                    kernel_size=3):
+    return (input_size + 2*padding - dilation * (kernel_size - 1) - 1) / stride + 1
