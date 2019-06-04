@@ -163,7 +163,7 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
         """
 
         tick = time.time()
-        # TODO: I think I should really consider implementing the max and sum in the statistics...
+        # TODO: The accumulate function should really consider the current update rule (!!!)
         featurer_outputs = self.featurer(affinities, segmentation)
 
         graph = featurer_outputs['graph']
@@ -226,7 +226,7 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
                                           node_sizes=node_sizes,
                                           is_merge_edge=is_local_edge,
                                           return_UCM=self.return_UCM,
-                                          return_agglomeration_data=False,
+                                          return_agglomeration_data=True,
                                           **self.extra_aggl_kwargs,
                                           **self.extra_runAggl_kwargs)
 
@@ -241,7 +241,7 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
             number_of_threads=self.n_threads,
             fill_value=-1.,
             ignore_label=-1,
-        )[..., 0]
+        )[..., 0].astype(np.int64)
         # Increase by one, so ignore label becomes 0:
         final_segm += 1
 
@@ -380,7 +380,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
                                           edge_sizes=edge_sizes,
                                           is_merge_edge=is_local_edge,
                                          return_UCM=self.return_UCM,
-                                          return_agglomeration_data=False,
+                                          return_agglomeration_data=True,
                                           ignored_edge_weights=ignored_edge_weights,
                                           **self.extra_aggl_kwargs)
 
@@ -432,7 +432,7 @@ def runGreedyGraphEdgeContraction(
     """
 
     if update_rule == 'MutexWatershed' or (update_rule == 'max' and not add_cannot_link_constraints):
-    # if update_rule == 'MutexWatershed' and False:
+    # if False:
         assert not return_UCM
         # In this case we use the efficient MWS clustering implementation in affogato:
         nb_nodes = graph.numberOfNodes
@@ -494,9 +494,9 @@ def runGreedyGraphEdgeContraction(
         runtime = time.time() - tick
 
         nodeSeg = agglomerativeClustering.result()
-        out_dict['runtime'] =  runtime
+        out_dict['runtime'] = runtime
         if return_agglomeration_data:
-            out_dict['agglomeration_data'] = cluster_policy.exportAgglomerationData()
+            out_dict['agglomeration_data'], out_dict['edge_data_contracted_graph'] = cluster_policy.exportAgglomerationData()
         return nodeSeg, out_dict
 
 
