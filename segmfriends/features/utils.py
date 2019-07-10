@@ -33,7 +33,7 @@ def from_affinities_to_hmap(affinities, offsets, used_offsets=None, offset_weigh
             elif shf > 0:
                 padding[ax][0] = shf
         padded_inverted_affs = np.pad(inverted_affs, pad_width=((0, 0),) + tuple(padding), mode='constant')
-        crop_slices = [slice(padding[ax][0], padded_inverted_affs.shape[ax+1] - padding[ax][1]) for ax in range(3)]
+        crop_slices = tuple(slice(padding[ax][0], padded_inverted_affs.shape[ax+1] - padding[ax][1]) for ax in range(3))
         rolled_affs.append(np.roll(padded_inverted_affs[offs_idx], shifts, axis=(0,1,2))[crop_slices] * offset_weights[i])
     prob_map = np.stack(rolled_affs).max(axis=0)
 

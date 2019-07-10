@@ -11,7 +11,7 @@ from ..segm_pipeline import SegmentationPipeline
 from ...features.utils import probs_to_costs
 from ...transform.segm_to_bound import compute_mask_boundaries_graph
 
-from affogato.segmentation import compute_mws_clustering, compute_single_linkage_clustering
+from nifty.segmentation import compute_mws_clustering, compute_single_linkage_clustering
 
 import time
 
@@ -98,7 +98,7 @@ class GreedyEdgeContractionAgglomeraterBase(object):
                 Examples of accepted update rules:
 
                  - 'mean'
-                 - 'MutexWatershed'
+                 - 'mutex_watershed'
                  - 'max'
                  - 'min'
                  - 'sum'
@@ -161,6 +161,8 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
         Here we expect real affinities (1: merge, 0: split).
         If the opposite is passed, set option `invert_affinities == True`
         """
+
+        # FIXME: check that invert_affs is not applied twice (in featurer, WSDT and in segm_pipeline)
 
         tick = time.time()
         # TODO: The accumulate function should really consider the current update rule (!!!)
@@ -431,7 +433,7 @@ def runGreedyGraphEdgeContraction(
     every edge.
     """
 
-    if update_rule == 'MutexWatershed' or (update_rule == 'max' and not add_cannot_link_constraints):
+    if update_rule == 'mutex_watershed' or (update_rule == 'max' and not add_cannot_link_constraints):
     # if False:
         assert not return_UCM
         # In this case we use the efficient MWS clustering implementation in affogato:
@@ -446,7 +448,7 @@ def runGreedyGraphEdgeContraction(
 
         tick = time.time()
         # This function will sort the edges in ascending order, so we transform all the edges to negative values
-        if update_rule == 'MutexWatershed':
+        if update_rule == 'mutex_watershed':
             nodeSeg = compute_mws_clustering(nb_nodes,
                                    uv_ids[np.logical_not(mutex_edges)],
                                    uv_ids[mutex_edges],
@@ -468,12 +470,13 @@ def runGreedyGraphEdgeContraction(
         #     signed_edge_weights *= edge_sizes
 
 
-        cluster_policy = nagglo.greedyGraphEdgeContraction(graph, signed_edge_weights,
+        cluster_policy = nagglo.get_GASP_policy(graph, signed_edge_weights,
                                                                edge_sizes=edge_sizes,
-                                                               update_rule=update_rule,
+                                                               linkage_criteria=update_rule,
+                                                                linkage_criteria_kwargs = None,
                                                                add_cannot_link_constraints=add_cannot_link_constraints,
                                                                node_sizes=node_sizes,
-                                                               is_merge_edge=is_merge_edge,
+                                                               is_mergeable_edge=is_merge_edge,
                                                                size_regularizer=size_regularizer,
                                                                ignored_edge_weights=ignored_edge_weights,
                                                                )

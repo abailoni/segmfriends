@@ -104,11 +104,11 @@ def compute_output_size_transp_conv(input_size,
                                     stride=1,
                                     dilation=1,
                                     kernel_size=3):
-    return (input_size-1)*stride -2*padding + dilation*(kernel_size-1) + 1
+    return int((input_size-1)*stride -2*padding + dilation*(kernel_size-1) + 1)
 
 def compute_output_size_conv(input_size,
                                     padding=0,
                                     stride=1,
                                     dilation=1,
                                     kernel_size=3):
-    return (input_size + 2*padding - dilation * (kernel_size - 1) - 1) / stride + 1
+    return int((input_size + 2*padding - dilation * (kernel_size - 1) - 1) / stride + 1)

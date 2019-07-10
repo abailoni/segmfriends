@@ -13,6 +13,7 @@ def map_features_to_label_array(label_array, features, ignore_label=-1,
     :param fill_value: the fill value used in the mapped array to replace the ignore_label
     :return:
     """
+    # TODO: deprecate
     return ntools.mapFeaturesToLabelArray(label_array, features, ignore_label, fill_value, number_of_threads)
 
 
