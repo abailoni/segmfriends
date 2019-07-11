@@ -3,6 +3,7 @@ import yaml
 # from numba import njit
 from itertools import repeat
 import os
+import h5py
 
 def starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
     """
@@ -112,3 +113,28 @@ def compute_output_size_conv(input_size,
                                     dilation=1,
                                     kernel_size=3):
     return int((input_size + 2*padding - dilation * (kernel_size - 1) - 1) / stride + 1)
+
+
+def readHDF5(path, inner_path, crop_slice=None):
+    if isinstance(crop_slice, str):
+        crop_slice = parse_data_slice(crop_slice)
+    elif crop_slice is not None:
+        assert isinstance(crop_slice, tuple), "Crop slice not recognized"
+        assert all([isinstance(sl, slice) for sl in crop_slice]), "Crop slice not recognized"
+    else:
+        crop_slice = slice(None)
+    with h5py.File(path, 'r') as f:
+        output = f[inner_path][crop_slice]
+    return output
+
+def writeHDF5(data, path, inner_path, compression='gzip'):
+    with h5py.File(path, 'r+') as f:
+        if inner_path in f:
+            del f[inner_path]
+        f.create_dataset(inner_path, data=data, compression=compression)
+
+def getHDF5datasets(path):
+    # TODO: expand to sub-levels
+    with h5py.File(path, 'r') as f:
+        datasets = [dt for dt in f]
+    return datasets

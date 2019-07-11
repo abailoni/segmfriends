@@ -211,7 +211,7 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
 
         # Mask with background (e.g. ignore GT-label):
         if foreground_mask is not None:
-            assert foreground_mask.shape == segmentation.shape
+            assert foreground_mask.shape == segmentation.shape, "{}, {}".format(segmentation.shape, foreground_mask.shape)
             segmentation = segmentation.astype('int64')
             segmentation = np.where(foreground_mask, segmentation, np.ones_like(segmentation)*(-1))
 

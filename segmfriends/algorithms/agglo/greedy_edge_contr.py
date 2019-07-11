@@ -478,7 +478,6 @@ def runGreedyGraphEdgeContraction(
                                                                node_sizes=node_sizes,
                                                                is_mergeable_edge=is_merge_edge,
                                                                size_regularizer=size_regularizer,
-                                                               ignored_edge_weights=ignored_edge_weights,
                                                                )
         agglomerativeClustering = nagglo.agglomerativeClustering(cluster_policy)
 
