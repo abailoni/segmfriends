@@ -415,7 +415,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
 def runGreedyGraphEdgeContraction(
                           graph,
                           signed_edge_weights,
-                          update_rule = 'mean',
+                          linkage_criteria = 'mean',
                           add_cannot_link_constraints= False,
                           edge_sizes = None,
                           node_sizes = None,
@@ -432,10 +432,18 @@ def runGreedyGraphEdgeContraction(
     Returns node_labels and runtime. If return_UCM == True, then also returns the UCM and the merging iteration for
     every edge.
     """
+    # Legacy:
+    if "update_rule" in run_kwargs:
+        update_rule = run_kwargs.pop("update_rule")
+    else:
+        update_rule = linkage_criteria
 
     if update_rule == 'mutex_watershed' or (update_rule == 'max' and not add_cannot_link_constraints):
     # if False:
         assert not return_UCM
+        if is_merge_edge is not None:
+            if not is_merge_edge.all():
+                print("WARNING: Efficient implementations only works when all edges are mergeable")
         # In this case we use the efficient MWS clustering implementation in affogato:
         nb_nodes = graph.numberOfNodes
         uv_ids = graph.uvIds()
@@ -482,6 +490,7 @@ def runGreedyGraphEdgeContraction(
         agglomerativeClustering = nagglo.agglomerativeClustering(cluster_policy)
 
         out_dict = {}
+
 
         tick = time.time()
         if not return_UCM:

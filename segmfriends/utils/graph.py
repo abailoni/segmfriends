@@ -3,6 +3,7 @@ import nifty
 import numpy as np
 from nifty import graph as ngraph
 from nifty.graph import undirectedLongRangeGridGraph
+import warnings
 
 from ..features import accumulate_affinities_on_graph_edges
 
@@ -49,6 +50,7 @@ def build_lifted_graph_from_rag(rag,
         # TODO: take out local neighbors
         # used_offsets = offsets[nb_offsets_direct_neighbors:]
         used_offsets = offsets
+        warnings.warn("Offset probabilities and edge_masks could not work properly with superpixels...")
         possibly_lifted_edges = ngraph.compute_lifted_edges_from_rag_and_offsets(rag,
                                                                                  label_image,
                                                   used_offsets,
@@ -96,6 +98,8 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
 
     is_local_offset = np.zeros(offsets.shape[0], dtype='bool')
     is_local_offset[:nb_local_offsets] = True
+    warnings.warn("First {} offsets are assumed to be direct neighbors and the remaining ones long-range".format(
+        nb_local_offsets))
     if label_image is not None:
         assert image_shape == label_image.shape
         if offsets_weights is not None:
@@ -122,6 +126,7 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
         # print(np.unique(offset_index, return_counts=True))
         is_local_edge = np.empty_like(offset_index, dtype='bool')
         w = np.where(offset_index < nb_local_offsets)
+        warnings.warn("First {} offsets are assumed to be direct neighbors and the remaining ones long-range".format(nb_local_offsets))
         is_local_edge[:] = 0
         is_local_edge[w] = 1
         # print("Nb. local edges: {} out of {}".format(is_local_edge.sum(), graph.numberOfEdges))

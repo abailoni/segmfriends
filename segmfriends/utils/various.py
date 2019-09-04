@@ -128,7 +128,11 @@ def readHDF5(path, inner_path, crop_slice=None):
     return output
 
 def writeHDF5(data, path, inner_path, compression='gzip'):
-    with h5py.File(path, 'r+') as f:
+    if os.path.exists(path):
+        write_mode = 'r+'
+    else:
+        write_mode = 'w'
+    with h5py.File(path, write_mode) as f:
         if inner_path in f:
             del f[inner_path]
         f.create_dataset(inner_path, data=data, compression=compression)

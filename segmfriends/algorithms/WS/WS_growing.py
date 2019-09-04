@@ -5,6 +5,7 @@ from ...features import from_affinities_to_hmap
 from ...features.vigra_feat import accumulate_segment_features_vigra
 
 import nifty.graph.rag as nrag
+from nifty import tools as ntools
 
 class SizeThreshAndGrowWithWS(object):
     """
@@ -45,20 +46,22 @@ class SizeThreshAndGrowWithWS(object):
         # nodeSizes = node_features[:, [1]]
         # sizeMap = map_features_to_label_array(label_image,nodeSizes,number_of_threads=6).squeeze()
 
+        def get_size_map(label_image):
+            node_sizes = np.bincount(label_image.flatten())
+            # rag = nrag.gridRag(label_image)
+            # _, node_features = nrag.accumulateMeanAndLength(rag, label_image.astype('float32'),
+            #                                                 blockShape=[1, 100, 100],
+            #                                                 numberOfThreads=8,
+            #                                                 saveMemory=True)
+            # nodeSizes = node_features[:, [1]]
+            return ntools.mapFeaturesToLabelArray(label_image, node_sizes[:,None], nb_threads=6).squeeze()
+
         if not self.size_of_2d_slices:
-            sizeMap = accumulate_segment_features_vigra([label_image],
-                                                          [label_image],
-                                                          ['Count'],
-                                                          map_to_image=True
-            ).squeeze()
+            sizeMap = get_size_map(label_image)
         else:
             sizeMap = np.empty_like(label_image)
             for z in range(label_image.shape[0]):
-                sizeMap[z] = accumulate_segment_features_vigra([label_image[[z]]],
-                                                          [label_image[[z]]],
-                                                          ['Count'],
-                                                          map_to_image=True
-                ).squeeze()
+                sizeMap[[z]] = get_size_map(label_image[[z]])
                 print(z, flush=True, end=" ")
 
         sizeMask = sizeMap > self.size_threshold

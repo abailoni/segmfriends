@@ -71,6 +71,22 @@ def multicut(rag, n_nodes, uvs, costs, time_limit=None,
             visitor = obj_mc.verboseVisitor()
             node_labels = solver.optimize(visitor=visitor)
 
+    elif solver_type == 'kernighanLin':
+        solverFactory = obj_mc.kernighanLinFactory()
+        solver = solverFactory.create(obj_mc)
+        visitor = obj_mc.verboseVisitor(1)
+        node_labels = solver.optimize(visitor)
+    elif solver_type == 'GAEC+kernighanLin':
+        solverFactory = obj_mc.greedyAdditiveFactory()
+        solver = solverFactory.create(obj_mc)
+        visitor = obj_mc.verboseVisitor(1)
+        arg = solver.optimize()
+
+        solverFactory = obj_mc.kernighanLinFactory()
+        solver = solverFactory.create(obj_mc)
+        visitor = obj_mc.verboseVisitor(1)
+        node_labels = solver.optimize(visitor, arg)
+
     elif solver_type == 'fusionMoves':
         """
         .def_readwrite("nodeNumStopCond", &SettingsType::nodeNumStopCond)
