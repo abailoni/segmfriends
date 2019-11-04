@@ -75,16 +75,24 @@ class MutexWatershed(WatershedBase):
         return segmentation, max_label
 
     def __call__(self, affinities):
-        # FIXME: Actually these are supposed to be a prob. map, not affinities...
+        # FIXME: Actually these are supposed to be a prob. map, not affinities... (not with the new version!)
         if self.invert_affinities:
             affinities = 1. - affinities
-        # Apply bias (0.0: merge everything; 1.0: split everything, or what can be split)
-        affinities[:self.seperating_channel] -= 2 * (self.bias - 0.5)
-        if self.stacked_2d:
-            affinities_ = np.require(affinities[self.keep_channels], requirements='C')
-            segmentation, _ = superpixel_stacked_from_affinities(affinities_,
-                                                                 self.damws_superpixel,
-                                                                 self.n_threads)
-        else:
-            segmentation, _ = self.damws_superpixel(affinities)
+
+        # FIXME: to be completed
+        from nifty.segmentation import compute_mws_segmentation
+        segmentation = compute_mws_segmentation(affinities, self.offsets, self.seperating_channel,
+                                     strides=self.stride, randomize_strides=False, invert_repulsive_weights=True,
+                                     bias_cut=0., mask=None,
+                                     algorithm='kruskal')
+
+        # # Apply bias (0.0: merge everything; 1.0: split everything, or what can be split)
+        # affinities[:self.seperating_channel] -= 2 * (self.bias - 0.5)
+        # if self.stacked_2d:
+        #     affinities_ = np.require(affinities[self.keep_channels], requirements='C')
+        #     segmentation, _ = superpixel_stacked_from_affinities(affinities_,
+        #                                                          self.damws_superpixel,
+        #                                                          self.n_threads)
+        # else:
+        #     segmentation, _ = self.damws_superpixel(affinities)
         return segmentation
