@@ -110,9 +110,10 @@ def plot_lookahead(ax, lookahead, mergers=True, z_slice=0):
     ax.get_yaxis().set_visible(False)
     return ax
 
-def get_figure(ncols, nrows, hide_axes=True):
+def get_figure(ncols, nrows, hide_axes=True, figsize=None):
+    figsize = (ncols, nrows) if figsize is None else figsize
     f, ax = plt.subplots(ncols=ncols, nrows=nrows,
-                         figsize=(ncols, nrows))
+                         figsize=figsize)
     if hide_axes:
         for a in f.get_axes():
             a.axis('off')
