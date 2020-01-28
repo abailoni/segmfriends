@@ -4,6 +4,7 @@ import yaml
 from itertools import repeat
 import os
 import h5py
+import vigra
 
 def starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
     """
@@ -93,11 +94,14 @@ def yaml2dict(path):
     return readict
 
 def check_dir_and_create(directory):
-  '''
-  if the directory does not exist, create it
-  '''
-  if not os.path.exists(directory):
-    os.makedirs(directory)
+    '''
+    if the directory does not exist, create it
+    '''
+    folder_exists = os.path.exists(directory)
+    if not folder_exists:
+        os.makedirs(directory)
+    return folder_exists
+
 
 
 def compute_output_size_transp_conv(input_size,
@@ -115,7 +119,12 @@ def compute_output_size_conv(input_size,
     return int((input_size + 2*padding - dilation * (kernel_size - 1) - 1) / stride + 1)
 
 
-def readHDF5(path, inner_path, crop_slice=None):
+def readHDF5(path,
+             inner_path,
+             crop_slice=None,
+             dtype=None,
+             run_connected_components=False,
+             ):
     if isinstance(crop_slice, str):
         crop_slice = parse_data_slice(crop_slice)
     elif crop_slice is not None:
@@ -125,7 +134,29 @@ def readHDF5(path, inner_path, crop_slice=None):
         crop_slice = slice(None)
     with h5py.File(path, 'r') as f:
         output = f[inner_path][crop_slice]
+
+    if run_connected_components:
+        assert output.dtype in [np.dtype("uint32")]
+        assert output.ndim == 3 or output.ndim == 2
+        output = vigra.analysis.labelVolumeWithBackground(output.astype('uint32'))
+    if dtype is not None:
+        output = output.astype(dtype)
+
     return output
+
+def readHDF5_from_volume_config(
+        sample,
+        path,
+        inner_path,
+        crop_slice=None,
+        dtype=None,
+        run_connected_components=False,
+        ):
+    path = path[sample] if isinstance(path, dict) else path
+    inner_path = inner_path[sample] if isinstance(inner_path, dict) else inner_path
+    crop_slice = crop_slice[sample] if isinstance(crop_slice, dict) else crop_slice
+    dtype = dtype[sample] if isinstance(dtype, dict) else dtype
+    return readHDF5(path, inner_path, crop_slice, dtype, run_connected_components)
 
 def writeHDF5(data, path, inner_path, compression='gzip'):
     if os.path.exists(path):
