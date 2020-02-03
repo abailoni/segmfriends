@@ -6,6 +6,12 @@ import os
 import h5py
 import vigra
 
+from scipy.ndimage import zoom
+
+from cremi.evaluation import NeuronIds
+from cremi import Volume
+
+
 def starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
     """
     Wrapper around pool.starmap accepting args_iter and kwargs_iter. Example of usage:
@@ -123,6 +129,8 @@ def readHDF5(path,
              inner_path,
              crop_slice=None,
              dtype=None,
+             ds_factor=None,
+             ds_order=3,
              run_connected_components=False,
              ):
     if isinstance(crop_slice, str):
@@ -142,6 +150,11 @@ def readHDF5(path,
     if dtype is not None:
         output = output.astype(dtype)
 
+    if ds_factor is not None:
+        assert isinstance(ds_factor, (list, tuple))
+        assert output.ndim == len(ds_factor)
+        output = zoom(output, tuple(1./fct for fct in ds_factor), order=ds_order)
+
     return output
 
 def readHDF5_from_volume_config(
@@ -150,13 +163,15 @@ def readHDF5_from_volume_config(
         inner_path,
         crop_slice=None,
         dtype=None,
+        ds_factor=None,
+        ds_order=3,
         run_connected_components=False,
         ):
     path = path[sample] if isinstance(path, dict) else path
     inner_path = inner_path[sample] if isinstance(inner_path, dict) else inner_path
     crop_slice = crop_slice[sample] if isinstance(crop_slice, dict) else crop_slice
     dtype = dtype[sample] if isinstance(dtype, dict) else dtype
-    return readHDF5(path, inner_path, crop_slice, dtype, run_connected_components)
+    return readHDF5(path, inner_path, crop_slice, dtype, ds_factor, ds_order, run_connected_components)
 
 def writeHDF5(data, path, inner_path, compression='gzip'):
     if os.path.exists(path):
@@ -173,3 +188,36 @@ def getHDF5datasets(path):
     with h5py.File(path, 'r') as f:
         datasets = [dt for dt in f]
     return datasets
+
+
+
+def cremi_score(gt, seg, return_all_scores=False, border_threshold=None):
+    # # the zeros must be kept in the gt since they are the ignore label
+    gt = vigra.analysis.labelVolumeWithBackground(gt.astype(np.uint32))
+    # seg = vigra.analysis.labelVolume(seg.astype(np.uint32))
+
+    seg = np.array(seg)
+    seg = np.require(seg, requirements=['C'])
+    # Make sure that all labels are strictly positive:
+    seg = seg.astype('uint32')
+    # FIXME: it seems to have some trouble with label 0 in the segmentation:
+    seg += 1
+
+    gt = np.array(gt)
+    gt = np.require(gt, requirements=['C'])
+    gt = (gt - 1).astype('uint32')
+    # assert gt.min() >= -1
+
+    gt_ = Volume(gt)
+    seg_ = Volume(seg)
+
+    metrics = NeuronIds(gt_, border_threshold=border_threshold)
+    arand = metrics.adapted_rand(seg_)
+
+    vi_s, vi_m = metrics.voi(seg_)
+    cs = np.sqrt(arand * (vi_s + vi_m))
+    # cs = (vi_s + vi_m + arand) / 3.
+    if return_all_scores:
+        return {'cremi-score': cs.item(), 'vi-merge': vi_m.item(), 'vi-split': vi_s.item(), 'adapted-rand': arand.item()}
+    else:
+        return cs

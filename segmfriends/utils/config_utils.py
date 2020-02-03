@@ -53,7 +53,7 @@ def adapt_configs_to_model(model_IDs,
                     raise ValueError("Model ID should be a int. or a string")
             assert model_name is not None, "Model ID {} not found in the config file".format(model_ID)
             if debug:
-                print("Using model ", model_name)
+                print("Using preset ", model_name)
 
 
             new_model_configs = configs['models'][model_name]
@@ -95,8 +95,61 @@ def adapt_configs_to_model(model_IDs,
                     'volume_config']
                 configs[key]['volume_config'] = update_paths(configs[key]['volume_config'], model_volume_config)
 
+
+
     # Update model-specific parameters:
     for key in configs:
         configs[key] = recursive_dict_update(model_configs.get(key, {}), configs[key])
 
     return configs
+
+
+def adapt_configs_to_model_v2(preset_to_apply,
+                              config,
+                              all_presets,
+                           debug=False):
+    """
+    :param model_ID: can be an int ID or the name of the model
+    :param configs: list of strings with the paths to .yml files
+    """
+    def get_model_configs(presets_to_apply, model_configs=None):
+        model_configs = {} if model_configs is None else model_configs
+        presets_to_apply = [presets_to_apply] if not isinstance(presets_to_apply, list) else presets_to_apply
+
+        for pres_to_apply in presets_to_apply:  # Look for the given model:
+            # Look for the given model:
+            model_name = None
+            for name in all_presets:
+                if isinstance(pres_to_apply, int):
+                    if 'model_ID' in all_presets[name]:
+                        if all_presets[name]['model_ID'] == pres_to_apply:
+                            model_name = name
+                            break
+                elif isinstance(pres_to_apply, str):
+                    if name == pres_to_apply:
+                        model_name = name
+                        break
+                else:
+                    raise ValueError("Model ID should be a int. or a string")
+            assert model_name is not None, "Model ID {} not found in the config file".format(pres_to_apply)
+            if debug:
+                print("Using preset ", model_name)
+
+            new_model_configs = all_presets[model_name]
+
+            # Check parents models and update them recursively:
+            if 'parent_model' in new_model_configs:
+                model_configs = get_model_configs(new_model_configs['parent_model'], model_configs)
+
+            # Update config with current options:
+            model_configs = recursive_dict_update(new_model_configs, model_configs)
+
+        return model_configs
+
+    config_mods = get_model_configs(preset_to_apply)
+
+    # Update model-specific parameters:
+    for key in config:
+        config[key] = recursive_dict_update(config_mods.get(key, {}), config[key])
+
+    return config
