@@ -15,7 +15,8 @@ rand_cm = matplotlib.colors.ListedColormap(np.random.rand(__MAX_LABEL__, 3))
 
 
 matplotlib.rcParams.update({'font.size': 5})
-DEF_INTERP = 'none'
+# DEF_INTERP = 'none'
+DEF_INTERP = 'nearest'
 segm_plot_kwargs = {'vmax': __MAX_LABEL__, 'vmin':0}
 
 
@@ -124,7 +125,11 @@ def save_plot(f, path, file_name):
     # plt.tight_layout()
     if file_name.endswith('pdf'):
         f.savefig(os.path.join(path, file_name), format='pdf')
-
+    # elif file_name.endswith('png'):
+    #     f.savefig(os.path.join(path, file_name))
+    else:
+        f.savefig(os.path.join(path, file_name))
+        # raise ValueError("File extension not supported atm")
 
 def set_log_tics(ax, sub_range, sub_ticks, format = "%.2f", axis='x'):
     """

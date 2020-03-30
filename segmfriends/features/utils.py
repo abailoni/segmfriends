@@ -85,6 +85,7 @@ def get_z_edges(rag, seg):
 def probs_to_costs(probs,
                    beta=.5,
                    weighting_scheme=None,
+                   edge_sizes=None,
                    rag=None,
                    segmentation=None,
                    weight=16.):
@@ -106,17 +107,18 @@ def probs_to_costs(probs,
     costs = np.log((1. - costs) / costs) + np.log((1. - beta) / beta)
 
     if weighting_scheme is not None:
-        assert rag is not None
         assert weighting_scheme in ('xyz', 'z', 'all')
-        assert segmentation is not None
-        shape = segmentation.shape
-        fake_data = np.zeros(shape, dtype='float32')
-        # FIXME something is wrong here with the nifty function
-        edge_sizes = nrag.accumulateEdgeMeanAndLength(rag, fake_data)[:, 1]
+
+        if edge_sizes is None:
+            assert rag is not None
+            assert segmentation is not None
+            shape = segmentation.shape
+            fake_data = np.zeros(shape, dtype='float32')
+            # FIXME something is wrong here with the nifty function
+            edge_sizes = nrag.accumulateEdgeMeanAndLength(rag, fake_data)[:, 1]
 
         if weighting_scheme == 'all':
             w = weight * edge_sizes / edge_sizes.max()
-
         elif weighting_scheme == 'z':
             assert segmentation is not None
             z_edges = get_z_edges(rag, segmentation)

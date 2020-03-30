@@ -153,3 +153,23 @@ def adapt_configs_to_model_v2(preset_to_apply,
         config[key] = recursive_dict_update(config_mods.get(key, {}), config[key])
 
     return config
+
+
+
+def assign_color_to_table_value(value, good_thresh, bad_thresh, nb_flt, best="lowest"):
+    if best == "lowest":
+        if value < good_thresh:
+            return '{{\color{{ForestGreen}} {num:.{prec}f} }}'.format(prec=nb_flt, num=value)
+        if value > good_thresh and value < bad_thresh:
+            return '{{\color{{Orange}} {num:.{prec}f} }}'.format(prec=nb_flt, num=value)
+        if value > bad_thresh:
+            return '{{\color{{Red}} {num:.{prec}f} }}'.format(prec=nb_flt, num=value)
+    elif best == "highest":
+        if value > good_thresh:
+            return '{{\color{{ForestGreen}} {num:.{prec}f} }}'.format(prec=nb_flt, num=value)
+        if value < good_thresh and value > bad_thresh:
+            return '{{\color{{Orange}} {num:.{prec}f} }}'.format(prec=nb_flt, num=value)
+        if value < bad_thresh:
+            return '{{\color{{Red}} {num:.{prec}f} }}'.format(prec=nb_flt, num=value)
+    else:
+        raise ValueError

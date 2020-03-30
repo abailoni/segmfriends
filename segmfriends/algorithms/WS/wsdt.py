@@ -112,20 +112,32 @@ class IntersectWithBoundaryPixels(object):
         self.boundary_threshold = boundary_threshold
 
     def __call__(self, affinities, dtws_segm):
-        # print("FInd hmap")
+        print("FInd hmap")
         hmap = from_affinities_to_hmap(affinities, self.offsets, self.used_offsets,
                                        self.offset_weights)
         pixel_segm = np.arange(np.prod(dtws_segm.shape), dtype='uint64').reshape(dtws_segm.shape) + dtws_segm.max()
         boundary_mask = (1.-hmap) < self.boundary_threshold
 
-        # print("Relabel volume")
+        print("Relabel volume")
         dtws_segm = vigra.analysis.labelVolume((dtws_segm * np.logical_not(boundary_mask)).astype('uint32'))
 
+        # fig, ax = segm_vis.get_figure(2, 2, figsize=(14,14))
+
+        # segm_vis.plot_output_affin(ax[0,0], affinities, nb_offset=1, z_slice=1)
+        # segm_vis.plot_output_affin(ax[0,1], affinities, nb_offset=2, z_slice=1)
+        # segm_vis.plot_gray_image(ax[0,1], hmap,z_slice=1)
+        # segm_vis.plot_gray_image(ax[0,1], affinities[2],z_slice=1)
+
+        # segm_vis.plot_segm(ax[1,0], dtws_segm, z_slice=1)
+
         new_segmentation = np.where(boundary_mask, pixel_segm, dtws_segm)
-        # print("Relabel consecutive")
+
+        # segm_vis.plot_segm(ax[1,1], new_segmentation, z_slice=1)
+        # segm_vis.save_plot(fig, "./", "debug_plot.pdf")
+        print("Relabel consecutive")
         new_segmentation = vigra.analysis.relabelConsecutive(new_segmentation)[0]
 
-        # print("Check new number of nodes!", new_segmentation.max())
+        print("Check new number of nodes!", new_segmentation.max())
 
         # from ... import vis as vis
         # import matplotlib.pyplot as plt
@@ -189,24 +201,27 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
         Here we expect real affinities (1: merge, 0: split).
         If the opposite is passed, set option `invert_affinities == True`
         """
-        assert len(inputs) == 1 or len(inputs) == 2
+        assert len(inputs) == 1 or len(inputs) == 2, len(inputs)
         affinities = inputs[0]
         foreground_mask = inputs[1] if len(inputs) == 2 else None
 
-        assert affinities.shape[0] == len(self.offsets)
-        assert affinities.ndim == 4
+        assert affinities.shape[0] == len(self.offsets), "{}, {}".format(affinities.shape[0], len(self.offsets))
+        assert affinities.ndim == 4, "{}".format(affinities.ndim)
 
         if self.invert_affinities:
             affinities = 1. - affinities
 
-        # print("Predict hmap")
+        print(affinities.mean())
+
+        print("Predict hmap")
         hmap = from_affinities_to_hmap(affinities, self.offsets, self.used_offsets,
                                 self.offset_weights)
-        # print("Run WSDT")
+        print("Run WSDT")
         segmentation = super(WatershedOnDistanceTransformFromAffinities, self).__call__(hmap)
 
         # Intersect with boundary pixels:
         if self.intersect_with_boundary_pixels:
+            print("Intersecting with pixels")
             segmentation = self.intersect(affinities, segmentation)
 
         # Mask with background (e.g. ignore GT-label):

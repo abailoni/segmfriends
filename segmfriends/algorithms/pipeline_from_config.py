@@ -66,6 +66,7 @@ def get_segmentation_pipeline(
                                          used_offsets=multicut_kwargs.get('used_offsets'),
                                          invert_affinities= not invert_affinities,
                                          debug=False,
+                                         return_dict=True,
                                          offset_probabilities=multicut_kwargs.get('offsets_probabilities', 1.0)
                                          )
         if post_proc_config.get('start_from_given_segm', False):

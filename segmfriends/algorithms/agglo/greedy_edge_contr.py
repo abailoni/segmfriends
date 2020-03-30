@@ -174,6 +174,8 @@ class GreedyEdgeContractionAgglomeraterFromSuperpixels(GreedyEdgeContractionAggl
             # merge_prio = featurer_outputs['merge_prio']
             # not_merge_prio = featurer_outputs['not_merge_prio']
 
+        print("Number of edges: ", featurer_outputs['edge_sizes'].shape)
+
         # FIXME: set edge_sizes to rag!!!
         edge_indicators = featurer_outputs['edge_indicators']
         edge_sizes = featurer_outputs['edge_sizes']
@@ -300,14 +302,21 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         offsets = self.offsets
         offset_probabilities = self.offset_probabilities
         offsets_weights = self.offsets_weights
+        mask_used_edges = self.mask_used_edges
         if self.used_offsets is not None:
+            # TODO: move most of this stuff to init!
             assert len(self.used_offsets) < self.offsets.shape[0]
             offsets = self.offsets[self.used_offsets]
             affinities = affinities[self.used_offsets]
-            offset_probabilities = self.offset_probabilities[self.used_offsets]
+            if isinstance(offset_probabilities, np.ndarray):
+                offset_probabilities = self.offset_probabilities[self.used_offsets]
             if isinstance(offsets_weights, (list, tuple)):
                 offsets_weights = np.array(offsets_weights)
-            offsets_weights = offsets_weights[self.used_offsets]
+            if offsets_weights is not None:
+                offsets_weights = offsets_weights[self.used_offsets]
+
+            if self.mask_used_edges is not None:
+                mask_used_edges = self.mask_used_edges[self.used_offsets]
 
         assert affinities.ndim == 4
         assert affinities.shape[0] == offsets.shape[0]
@@ -326,7 +335,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
                 offsets_weights=offsets_weights,
                 nb_local_offsets=self.nb_merge_offsets,
                 strides=self.strides,
-                mask_used_edges=self.mask_used_edges
+                mask_used_edges=mask_used_edges
             )
 
         # Build policy:

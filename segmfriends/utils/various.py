@@ -167,6 +167,10 @@ def readHDF5_from_volume_config(
         ds_order=3,
         run_connected_components=False,
         ):
+    if isinstance(path, dict):
+        if sample not in path:
+            sample = eval(sample)
+            assert sample in path
     path = path[sample] if isinstance(path, dict) else path
     inner_path = inner_path[sample] if isinstance(inner_path, dict) else inner_path
     crop_slice = crop_slice[sample] if isinstance(crop_slice, dict) else crop_slice

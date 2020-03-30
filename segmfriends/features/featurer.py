@@ -198,7 +198,12 @@ class FeaturerLongRangeAffs(object):
 
         if not self.return_dict:
             edge_features = np.stack([edge_indicators, edge_sizes, is_local_edge])
-            return lifted_graph, edge_features
+            if isinstance(self.offset_probabilities, np.ndarray):
+                assert all(self.offset_probabilities == 0.), "For the moment only local edges supported"
+            else:
+                assert self.offset_probabilities == 0., "For the moment only local edges supported"
+            # FIXME: multicut complains if it receices a graph instead of a rag
+            return rag, edge_features
         else:
             out_dict['is_local_edge'] = is_local_edge
             return out_dict

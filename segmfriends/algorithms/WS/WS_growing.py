@@ -20,12 +20,14 @@ class SizeThreshAndGrowWithWS(object):
                  apply_WS_growing=True,
                  size_of_2d_slices=False,
                  debug=False,
-                 with_background=False):
+                 with_background=False,
+                 invert_affinities=False):
         """
         :param apply_WS_growing: if False, then the 'seed_mask' is returned
         :param size_of_2d_slices: compute size for all z-slices (memory efficient)
         """
         self.size_threshold = size_threshold
+        self.invert_affinities = invert_affinities
         self.offsets = offsets
         assert len(offsets[0]) ==  3, "Only 3D supported atm"
         self.hmap_kwargs = {} if hmap_kwargs is None else hmap_kwargs
@@ -36,6 +38,9 @@ class SizeThreshAndGrowWithWS(object):
 
     def __call__(self, affinities, label_image):
         assert len(self.offsets) == affinities.shape[0], "Affinities does not match offsets"
+        if self.invert_affinities:
+            affinities = 1. - affinities
+
         if self.debug:
             print("Computing segment sizes...")
         label_image = label_image.astype(np.uint32)

@@ -6,6 +6,8 @@ from .multicut import multicut, lifted_multicut
 from ..segm_pipeline import SegmentationPipeline
 
 from ...features import probs_to_costs
+from ...features import mappings
+import time
 
 # FIXME median looks much worse than mean !
 # is it broken ?!
@@ -38,25 +40,47 @@ class Multicut(object):
         self.beta = beta
 
     def __call__(self, affinities, segmentation):
-        rag, edge_features = self.featurer(affinities, segmentation)
+        featurer_outputs = self.featurer(affinities, segmentation)
+
+        edge_indicators = featurer_outputs['edge_indicators']
+        edge_sizes = featurer_outputs['edge_sizes']
+        graph = featurer_outputs['graph']
 
         # this might happen in weird cases when our watershed predicts one single region
         # -> if this happens in one of the first validation runs this is no reason to worry
-        if rag.numberOfEdges == 0:
+        if graph.numberOfEdges == 0:
             print("Valdidation stopped because we have no graph edges")
             return np.zeros_like(segmentation, dtype='uint32')
 
-        edge_features = edge_features[self.stat_id]
-        costs = probs_to_costs(edge_features, beta=self.beta,
+        # edge_features = edge_features[self.stat_id]
+        costs = probs_to_costs(edge_indicators, beta=self.beta,
                                weighting_scheme=self.weighting_scheme,
-                               rag=rag, segmentation=segmentation,
+                               rag=graph, segmentation=segmentation,
+                               edge_sizes=edge_sizes,
                                weight=self.weight)
-        node_labels = multicut(rag, rag.numberOfNodes, rag.uvIds(), costs, self.time_limit, solver_type=self.solver_type,
+        tick = time.time()
+        node_labels = multicut(graph, graph.numberOfNodes, graph.uvIds(), costs, self.time_limit, solver_type=self.solver_type,
                                verbose_visitNth=100000000)
-        edge_labels = rag.nodesLabelsToEdgeLabels(node_labels)
+        runtime = time.time() - tick
+
+        # Map back segmentation to pixels:
+        final_segm = mappings.map_features_to_label_array(
+            segmentation,
+            np.expand_dims(node_labels, axis=-1),
+            number_of_threads=1,
+            fill_value=-1.,
+            ignore_label=-1,
+        )[..., 0].astype(np.int64)
+        # Increase by one, so ignore label becomes 0:
+        final_segm += 1
+
+        # Compute MC energy:
+        edge_labels = graph.nodesLabelsToEdgeLabels(node_labels)
+
         out_dict = {}
         out_dict['MC_energy'] = (costs * edge_labels).sum()
-        return nrag.projectScalarNodeDataToPixels(rag, node_labels), out_dict
+        out_dict['runtime'] = runtime
+        return final_segm, out_dict
 
 
 class MulticutPipelineFromAffinities(SegmentationPipeline):
