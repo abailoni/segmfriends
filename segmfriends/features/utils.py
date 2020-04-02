@@ -37,31 +37,6 @@ def from_affinities_to_hmap(affinities, offsets, used_offsets=None, offset_weigh
         rolled_affs.append(np.roll(padded_inverted_affs[offs_idx], shifts, axis=(0,1,2))[crop_slices] * offset_weights[i])
     prob_map = np.stack(rolled_affs).max(axis=0)
 
-
-    # padding = [[0, 0] for _ in range(3)]
-    # for ax in range(3):
-    #     padding[ax][0] = np.abs(offsets[:, ax].min())
-    #     padding[ax][1] = offsets[:, ax].max()
-    #
-    # padded_inverted_affs = np.pad(inverted_affs, pad_width=((0,0), ) + tuple(padding), mode='constant')
-    # crop_slices = [slice(padding[ax][0], padded_inverted_affs.shape[ax+1] - padding[ax][1]) for ax in range(3)]
-    #
-    # raise NotImplementedError("This is broken")
-    # channelwise_prob_map = []
-    # for i, offs_idx in enumerate(used_offsets):
-    #     offset = offsets[offs_idx]
-    #
-    #     rolled_inv_affs = padded_inverted_affs.copy()
-    #     for ax, offset_ax in enumerate(offset):
-    #         if offset_ax != 0:
-    #             rolled_inv_affs = np.roll(rolled_inv_affs, -offset_ax, axis=ax)
-    #     # new_channelwise_prob_map = np.maximum(rolled_inv_affs[offs_idx], padded_inverted_affs[offs_idx]) * offset_weights[i]
-    #     new_channelwise_prob_map = rolled_inv_affs[offs_idx] * offset_weights[i]
-    #     channelwise_prob_map.append(new_channelwise_prob_map[crop_slices])
-    # prob_map = np.stack(channelwise_prob_map).max(axis=0)
-
-
-
     return prob_map
 
 
@@ -140,7 +115,6 @@ def probs_to_costs(probs,
     return costs
 
 
-
 def size_filter(hmap, seg, threshold):
     segments, counts = np.unique(seg, return_counts=True)
     mask = np.ma.masked_array(seg, np.in1d(seg, segments[counts < threshold])).mask
@@ -168,6 +142,7 @@ def superpixel_stacked(hmap, sp2d_fu, n_threads):
     offsets = np.cumsum(offsets).astype('uint32')
     segmentation += offsets[:, None, None]
     return segmentation, segmentation.max()
+
 
 def superpixel_stacked_from_affinities(affinities, sp2d_fu, n_threads):
     segmentation = np.zeros(affinities.shape[1:], dtype='uint32')

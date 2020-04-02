@@ -5,7 +5,7 @@ import numpy as np
 from .base import WatershedBase
 from ...features import superpixel_stacked, from_affinities_to_hmap
 
-class WatershedFromAffinities(WatershedBase):
+class WatershedFromAffinities(object):
     def __init__(self, offsets,
                        used_offsets=None,
                        offset_weights=None,

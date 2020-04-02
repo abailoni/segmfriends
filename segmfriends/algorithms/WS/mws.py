@@ -1,17 +1,7 @@
-import numpy as np
-# try:
-#     import constrained_mst as cmst
-# except ImportError:
-#     print("Constrained MST not found, can't use mst watersheds")
-
-from .base import WatershedBase
-from ...features import size_filter
-
 from nifty.segmentation import compute_mws_segmentation
 
 
-class MutexWatershed(WatershedBase):
-    # TODO: replace with new version!
+class MutexWatershed(object):
     def __init__(self, offsets, stride,
                  seperating_channel=3, invert_dam_channels=True,
                  randomize_bounds=False,
@@ -45,36 +35,6 @@ class MutexWatershed(WatershedBase):
         self.min_segment_size = min_segment_size
         self.n_threads = n_threads
         self.invert_affinities = invert_affinities
-
-    # def damws_superpixel(self, affinities):
-    #
-    #     assert affinities.shape[0] >= len(self.offsets)
-    #     # dam channels if ncessary
-    #     if self.invert_dam_channels:
-    #         affinities_ = affinities.copy()
-    #         affinities_[self.seperating_channel:] *= -1
-    #         affinities_[self.seperating_channel:] += 1
-    #     else:
-    #         affinities_ = affinities
-    #     # sort all edges
-    #     sorted_edges = np.argsort(affinities_.ravel())
-    #     # run the mst watershed
-    #     vol_shape = affinities_.shape[1:]
-    #     mst = cmst.ConstrainedWatershed(np.array(vol_shape),
-    #                                     self.offsets,
-    #                                     self.seperating_channel,
-    #                                     np.array(self.stride))
-    #     mst.repulsive_ucc_mst_cut(sorted_edges, 0)
-    #     if self.randomize_bounds:
-    #         mst.compute_randomized_bounds()
-    #     segmentation = mst.get_flat_label_image().reshape(vol_shape)
-    #     # apply the size filter if specified
-    #     if self.min_segment_size > 0:
-    #         hmap = np.sum(affinities[:3], axis=0)
-    #         segmentation, max_label = size_filter(hmap, segmentation, self.min_segment_size)
-    #     else:
-    #         max_label = segmentation.max()
-    #     return segmentation, max_label
 
     def __call__(self, affinities):
         if self.invert_affinities:

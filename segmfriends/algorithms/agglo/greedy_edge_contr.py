@@ -15,6 +15,8 @@ from nifty.segmentation import compute_mws_clustering, compute_single_linkage_cl
 
 import time
 
+# TODO: rename to GASP
+
 class GreedyEdgeContractionClustering(SegmentationPipeline):
     def __init__(self, offsets, fragmenter=None,
                  offsets_probabilities=None,

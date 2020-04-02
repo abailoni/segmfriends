@@ -1,6 +1,5 @@
 import numpy as np
 import yaml
-# from numba import njit
 from itertools import repeat
 import os
 import h5py
@@ -8,8 +7,13 @@ import vigra
 
 from scipy.ndimage import zoom
 
-from cremi.evaluation import NeuronIds
-from cremi import Volume
+try:
+    import cremi
+    from cremi.evaluation import NeuronIds
+    from cremi import Volume
+except ImportError:
+    cremi = None
+
 
 
 def starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
@@ -196,6 +200,9 @@ def getHDF5datasets(path):
 
 
 def cremi_score(gt, seg, return_all_scores=False, border_threshold=None):
+    if cremi is None:
+        raise ImportError("The cremi package is necessary to run cremi_score()")
+
     # # the zeros must be kept in the gt since they are the ignore label
     gt = vigra.analysis.labelVolumeWithBackground(gt.astype(np.uint32))
     # seg = vigra.analysis.labelVolume(seg.astype(np.uint32))

@@ -5,7 +5,7 @@ from nifty.graph import rag as nrag
 
 from ..features import accumulate_affinities_on_graph_edges
 from ..utils.graph import build_lifted_graph_from_rag
-import vigra
+
 
 def get_rag(segmentation, nb_threads):
     # Check if the segmentation has a background label that should be ignored in the graph:
@@ -22,8 +22,6 @@ def get_rag(segmentation, nb_threads):
 
         # Build rag including background:
         return nrag.gridRag(mod_segmentation.astype(np.uint32), numberOfThreads=nb_threads), True
-
-
 
 
 class FeaturerLongRangeAffs(object):
@@ -95,15 +93,9 @@ class FeaturerLongRangeAffs(object):
 
         # Compute node_sizes:
         # TODO: better compute node sizes with vigra..?
-        # node_sizes = np.squeeze(vigra_feat.accumulate_segment_features_vigra(segmentation,
-        #                                                                                           segmentation, statistics=["Count"],
-        #                                                                                           normalization_mode=None, map_to_image=False))
-
-
-        # fake_data = np.empty(rag.shape, dtype='float32')
         # FIXME: this won't work
+        # fake_data = np.empty(rag.shape, dtype='float32')
         # out_dict['node_sizes'] = nrag.accumulateMeanAndLength(rag, fake_data)[1][:, 1]
-
         out_dict['node_sizes'] = None
 
         # TODO: add bck option to use only local edges
@@ -120,15 +112,6 @@ class FeaturerLongRangeAffs(object):
             has_background_label=has_background_label,
             mask_used_edges=self.mask_used_edges
         )
-
-        # lifted_graph, is_local_edge, _, edge_sizes = build_pixel_lifted_graph_from_offsets(
-        #     segmentation.shape,
-        #     offsets,
-        #     label_image=segmentation,
-        #     offsets_weights=None,
-        #     nb_local_offsets=3,
-        #     GT_label_image=None
-        # )
 
         if self.debug:
             print("Took {} s!".format(time.time() - tick))
@@ -147,54 +130,6 @@ class FeaturerLongRangeAffs(object):
         out_dict['graph'] = lifted_graph
         out_dict['edge_indicators'] = edge_indicators
         out_dict['edge_sizes'] = edge_sizes
-
-        # else:
-        #     out_dict['graph'] = rag
-        #     print("Computing edge_features...")
-        #     is_local_edge = np.ones(rag.numberOfEdges, dtype=np.int8)
-        #     # TODO: her we have rag (no need to pass egm.), but fix nifty function first.
-        #     if self.statistic == 'mean':
-        #         edge_indicators, edge_sizes = \
-        #             accumulate_affinities_on_graph_edges(
-        #                 affinities, offsets,
-        #                 graph=rag,
-        #                 label_image=segmentation,
-        #                 use_undirected_graph=True,
-        #                 mode=self.statistic,
-        #                 offsets_weights=offsets_weights,
-        #                 number_of_threads=self.n_threads)
-        #         out_dict['edge_indicators'] = edge_indicators
-        #         # out_dict['merge_prio'] = edge_indicators
-        #         # out_dict['not_merge_prio'] = 1 - edge_indicators
-        #         out_dict['edge_sizes'] = edge_sizes
-        #     elif self.statistic == 'max':
-        #         # DEPRECATED
-        #         merge_prio, edge_sizes = \
-        #             accumulate_affinities_on_graph_edges(
-        #                 affinities, offsets,
-        #                 graph=rag,
-        #                 label_image=segmentation,
-        #                 use_undirected_graph=True,
-        #                 mode=self.statistic,
-        #                 offsets_weights=offsets_weights,
-        #                 number_of_threads=self.n_threads)
-        #         not_merge_prio, _ = \
-        #             accumulate_affinities_on_graph_edges(
-        #                 1 - affinities, offsets,
-        #                 graph=rag,
-        #                 label_image=segmentation,
-        #                 use_undirected_graph=True,
-        #                 mode=self.statistic,
-        #                 offsets_weights=offsets_weights,
-        #                 number_of_threads=self.n_threads)
-        #         edge_indicators = merge_prio
-        #         out_dict['edge_indicators'] = merge_prio
-        #         # out_dict['merge_prio'] = merge_prio
-        #         # out_dict['not_merge_prio'] = not_merge_prio
-        #         out_dict['edge_sizes'] = edge_sizes
-        #     else:
-        #         raise NotImplementedError
-
 
         if not self.return_dict:
             edge_features = np.stack([edge_indicators, edge_sizes, is_local_edge])

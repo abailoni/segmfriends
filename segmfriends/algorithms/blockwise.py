@@ -3,7 +3,11 @@ import numpy as np
 import vigra
 from ..io.infer_loader import SimpleParallelLoader
 from ..utils.various import yaml2dict
-from inferno.io.volumetric import VolumeLoader
+try:
+    import inferno
+    from inferno.io.volumetric import VolumeLoader
+except ImportError:
+    inferno = None
 
 
 def process_batch(batches, dataset, get_slicings, segmentation_pipeline):
@@ -57,6 +61,8 @@ class BlockWise(object):
                  nb_threads=8,
                  return_fragments=False,
                  blockwise_config=None):
+        if inferno is None:
+            raise ImportError("Inferno is required to run BlockWise")
         self.segmentation_pipeline = segmentation_pipeline
         self.blockwise = blockwise
         self.return_fragments = return_fragments

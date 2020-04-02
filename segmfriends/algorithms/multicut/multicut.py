@@ -14,32 +14,6 @@ def lifted_multicut(n_nodes, local_uvs, local_costs, lifted_uvs, lifted_costs, t
     graph.insertEdges(local_uvs)
 
 
-    # #######
-    #
-    # solverFactory = obj_lmc.liftedMulticutGreedyAdditiveFactory()
-    # solver = solverFactory.create(obj)
-    # visitor = obj.verboseVisitor(1)
-    # arg = solver.optimize()
-    #
-    # solverFactory = obj_lmc.liftedMulticutKernighanLinFactory()
-    # solver = solverFactory.create(obj_lmc)
-    # visitor = obj_lmc.verboseVisitor(1)
-    # arg2 = solver.optimize(visitor, arg)
-    #
-    # pgen = obj_lmc.watershedProposalGenerator(sigma=1.0, seedingStrategie='SEED_FROM_LOCAL',
-    #                                           numberOfSeeds=0.1)
-    #
-    # solverFactory = obj_lmc.fusionMoveBasedFactory(proposalGenerator=pgen, numberOfIterations=100,
-    #                                                stopIfNoImprovement=10)
-    #
-    # solver = solverFactory.create(obj_lmc)
-    # visitor = obj_lmc.verboseVisitor(1)
-    # arg3 = solver.optimize(visitor, arg2)
-    #
-    # #######
-
-
-
     lifted_obj = nlmc.liftedMulticutObjective(graph)
     lifted_obj.setCosts(local_uvs, local_costs)
     lifted_obj.setCosts(lifted_uvs, lifted_costs)
@@ -158,20 +132,4 @@ def multicut(rag, n_nodes, uvs, costs, time_limit=None,
     else:
         raise NotImplementedError()
 
-
-    # if solver_type == 'kernighanLin':
-    #     solver = MulticutObjective.kernighanLinFactory().create(obj)
-    # elif solver_type == 'multicutIlpCplex':
-    #     solver = MulticutObjective.multicutIlpCplexFactory().create(obj)
-    # elif solver_type == 'ccFusionMoveBased':
-    #     solver = MulticutObjective.ccFusionMoveBasedFactory().create(obj)
-    # else:
-    #     raise NotImplementedError()
-    #
-    # if time_limit is not None:
-    #     visitor = obj.verboseVisitor(timeLimitSolver=time_limit)
-    #     node_labels = solver.optimize(visitor=visitor)
-    # else:
-    #     visitor = obj.verboseVisitor()
-    #     node_labels = solver.optimize(visitor=visitor)
     return node_labels

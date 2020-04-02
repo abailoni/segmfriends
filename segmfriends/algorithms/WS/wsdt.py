@@ -3,14 +3,13 @@ import numpy as np
 from scipy.ndimage.morphology import distance_transform_edt
 import vigra
 
-from .base import WatershedBase
 from ...features import superpixel_stacked, from_affinities_to_hmap, size_filter
 
 
 # watershed on distance transform:
 # seeds are generated on the inverted distance transform
 # the probability map is used for growing
-class WatershedOnDistanceTransform(WatershedBase):
+class WatershedOnDistanceTransform(object):
     def __init__(self, threshold, sigma_seeds,
                  preserve_membrane=True, min_segment_size=0,
                  stacked_2d=False, n_threads=1,

@@ -1,10 +1,6 @@
 import vigra
 import numpy as np
-from ...features.mappings import map_features_to_label_array
 from ...features import from_affinities_to_hmap
-from ...features.vigra_feat import accumulate_segment_features_vigra
-
-import nifty.graph.rag as nrag
 from nifty import tools as ntools
 
 class SizeThreshAndGrowWithWS(object):
