@@ -19,7 +19,8 @@ except ImportError:
     raise ImportError("CremiDataset requires neurofire")
 
 from ..utils.various import yaml2dict
-from ..transform.volume import MergeExtraMasks, DuplicateGtDefectedSlices, DownSampleAndCropTensorsInBatch, ReplicateTensorsInBatch
+from ..transform.volume import MergeExtraMasks, DuplicateGtDefectedSlices, DownSampleAndCropTensorsInBatch, \
+    ReplicateTensorsInBatch
 from ..transform.affinities import affinity_config_to_transform, Segmentation2AffinitiesDynamicOffsets
 
 

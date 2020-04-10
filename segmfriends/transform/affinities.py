@@ -67,20 +67,19 @@ class Segmentation2AffinitiesPluGliaAndBoundary(Segmentation2Affinities2or3D):
 
 
     def input_function(self, tensor):
-        labels = tensor
+        labels = tensor[0]
         boundary_mask = None
         glia_mask = None
+        extra_masks = None
 
-        if tensor.ndim == 4:
+        if tensor.shape[0] > 1:
             # Here we get both the segmentation and an additional mask:
             assert tensor.shape[0] == 2, "Only one additional mask is supported at the moment"
-            labels = tensor[0]
             extra_masks = tensor[1]
 
             if self.boundary_label is not None:
                 boundary_mask = (extra_masks == self.boundary_label)
-            if not self.train_affs_on_glia:
-                assert self.glia_label is not None
+            if not self.train_affs_on_glia and self.glia_label is not None:
                 glia_mask = (extra_masks == self.glia_label)
 
         output, mask = compute_affinities(labels.astype('int64'), self.offsets,
@@ -90,17 +89,6 @@ class Segmentation2AffinitiesPluGliaAndBoundary(Segmentation2Affinities2or3D):
 
         if self.learn_ignore_transitions and self.ignore_label is not None:
             output, mask = self.include_ignore_transitions(output, mask, labels)
-
-
-        # FIXME what does this do, need to refactor !
-        # hack for platyneris data
-        platy_hack = False
-        if platy_hack:
-            chan_mask = mask[1].astype('bool')
-            output[0][chan_mask] = np.min(output[:2], axis=0)[chan_mask]
-
-            chan_mask = mask[2].astype('bool')
-            output[0][chan_mask] = np.minimum(output[0], output[2])[chan_mask]
 
         # Cast to be sure
         if not output.dtype == self.dtype:
@@ -129,9 +117,9 @@ class Segmentation2AffinitiesPluGliaAndBoundary(Segmentation2Affinities2or3D):
         # We might want to carry the segmentation along for validation.
         # If this is the case, we insert it before the targets.
         if self.retain_segmentation:
-            # TODO: fix this mess
             # Add a channel axis to labels to make it (C, Z, Y, X) before cating to output
             if self.retain_extra_masks:
+                assert extra_masks is not None, "Extra masks where not passed and cannot be concatenated"
                 output = np.concatenate((labels[None].astype(self.dtype, copy=False),
                                          extra_masks[None].astype(self.dtype, copy=False),
                                          output),
@@ -148,12 +136,8 @@ class Segmentation2AffinitiesPluGliaAndBoundary(Segmentation2Affinities2or3D):
         return output
 
     def tensor_function(self, tensor):
-        assert tensor.ndim == 4
-        if self.boundary_label is None and self.glia_label is None:
-            assert tensor.shape[0] == 1
-            tensor = tensor[0]
-        else:
-            assert tensor.shape[0] == 2
+        if tensor.ndim == 3:
+            tensor = np.expand_dims(tensor, axis=0)
         output = self.input_function(tensor)
         return output
 

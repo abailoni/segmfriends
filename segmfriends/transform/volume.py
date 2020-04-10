@@ -183,3 +183,36 @@ class CheckBatchAndChannelDim(Transform):
             else:
                 raise ValueError
         return tuple(output_batch)
+
+
+class ApplyAndRemoveMask(Transform):
+    def __init__(self, first_invert_target=False,
+                 first_invert_prediction=False,
+                 **super_kwargs):
+        super(ApplyAndRemoveMask, self).__init__(**super_kwargs)
+        self.first_invert_target = first_invert_target
+        self.first_invert_prediction = first_invert_prediction
+
+    def batch_function(self, tensors):
+        assert len(tensors) == 2
+        prediction, target = tensors
+
+        # validate the prediction
+        assert prediction.dim() in [4, 5], prediction.dim()
+        assert target.dim() == prediction.dim(), "%i, %i" % (target.dim(), prediction.dim())
+        assert target.size(1) == 2 * prediction.size(1), "%i, %i" % (target.size(1), prediction.size(1))
+        assert target.shape[2:] == prediction.shape[2:], "%s, %s" % (str(target.shape), str(prediction.shape))
+        seperating_channel = target.size(1) // 2
+        mask = target[:, seperating_channel:]
+        target = target[:, :seperating_channel]
+        mask.requires_grad = False
+
+        if self.first_invert_prediction:
+            prediction = 1. - prediction
+        if self.first_invert_target:
+            target = 1. - target
+
+        # mask prediction and target with mask
+        prediction = prediction * mask
+        target = target * mask
+        return prediction, target
