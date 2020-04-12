@@ -242,7 +242,7 @@ loaders:
 
 
 model:
-  model_class: confnets.models.MultiScaleInput3DUNet
+  model_class: confnets.models.MultiScaleInputUNet
   model_kwargs:
     in_channels: 1
     out_channels: 20
@@ -349,6 +349,6 @@ firelight:
             value_range: [0,1]
         - IdentityVisualizer:
             input: ['target', index: 0, C: "1:11"]
-            cmap: gray
+            cmap: gray_r
             value_range: [0,1]
 
