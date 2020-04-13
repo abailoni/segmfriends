@@ -96,17 +96,17 @@ loaders:
             - [-1, 1, 1]
             - [-1, -1, 1]
             - [-1, 1, -1]
-            - [0, -9, 0]
-            - [0, 0, -9]
-            - [0, -9, -9]
-            - [0, 9, -9]
-            - [0, -9, -4]
-            - [0, -4, -9]
-            - [0, 4, -9]
-            - [0, 9, -4]
+            - [0, -5, 0]
+            - [0, 0, -5]
+            - [0, -5, -5]
+            - [0, 5, -5]
+            - [0, -5, -2]
+            - [0, -2, -5]
+            - [0, 2, -5]
+            - [0, 5, -2]
             # Long-ranges:
-            - [0, -27, 0]
-            - [0, 0, -27]
+            - [0, -14, 0]
+            - [0, 0, -14]
             - [-2, 0, 0]
             - [-3, 0, 0]
             - [-4, 0, 0]
@@ -184,9 +184,9 @@ loaders:
       # Raw data
       raw:
         path:
-          A: '$HCI_HOME/datasets/CREMI/padded_data/sample_A.h5'
-          B: '$HCI_HOME/datasets/CREMI/padded_data/sample_B.h5'
-          C: '$HCI_HOME/datasets/CREMI/padded_data/sample_C.h5'
+          A: '$HCI_HOME/datasets/CREMI/padded_data/sample_A_2x.h5'
+          B: '$HCI_HOME/datasets/CREMI/padded_data/sample_B_2x.h5'
+          C: '$HCI_HOME/datasets/CREMI/padded_data/sample_C_2x.h5'
         path_in_file: 'volumes/raw'
         dtype: float32
         sigma: 0.025
@@ -196,9 +196,9 @@ loaders:
       # Segmentation
       segmentation:
         path:
-          A: '$HCI_HOME/datasets/CREMI/padded_data/sample_A.h5'
-          B: '$HCI_HOME/datasets/CREMI/padded_data/sample_B.h5'
-          C: '$HCI_HOME/datasets/CREMI/padded_data/sample_C.h5'
+          A: '$HCI_HOME/datasets/CREMI/padded_data/sample_A_2x.h5'
+          B: '$HCI_HOME/datasets/CREMI/padded_data/sample_B_2x.h5'
+          C: '$HCI_HOME/datasets/CREMI/padded_data/sample_C_2x.h5'
         path_in_file: 'volumes/labels/neuron_ids'
         dtype: int32
 #        padding_mode: "constant"
@@ -224,7 +224,7 @@ loaders:
     volume_config:
       raw:
         path:
-          C: '$HCI_HOME/datasets/CREMI/padded_data/sample_C.h5'
+          C: '$HCI_HOME/datasets/CREMI/padded_data/sample_C_2x.h5'
         path_in_file: 'volumes/raw'
         dtype: float32
 #        sigma: 0.025
@@ -232,7 +232,7 @@ loaders:
 #        padding: *dataset_padding
       segmentation:
         path:
-          C: '$HCI_HOME/datasets/CREMI/padded_data/sample_C.h5'
+          C: '$HCI_HOME/datasets/CREMI/padded_data/sample_C_2x.h5'
         path_in_file: 'volumes/labels/neuron_ids'
         dtype: int32
 #        padding_mode: "constant"
