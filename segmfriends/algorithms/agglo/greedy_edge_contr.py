@@ -119,6 +119,8 @@ class GreedyEdgeContractionAgglomeraterBase(object):
 
         assert isinstance(n_threads, int)
 
+        # TODO: mask_used_edges should be passed during call
+
         self.offsets = offsets
         self.debug = debug
         self.n_threads = n_threads
@@ -306,7 +308,7 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         offsets_weights = self.offsets_weights
         mask_used_edges = self.mask_used_edges
         if self.used_offsets is not None:
-            # TODO: move most of this stuff to init!
+            # TODO: move most of this stuff to init
             assert len(self.used_offsets) < self.offsets.shape[0]
             offsets = self.offsets[self.used_offsets]
             affinities = affinities[self.used_offsets]

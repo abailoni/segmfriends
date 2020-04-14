@@ -232,3 +232,11 @@ def cremi_score(gt, seg, return_all_scores=False, border_threshold=None):
         return {'cremi-score': cs.item(), 'vi-merge': vi_m.item(), 'vi-split': vi_s.item(), 'adapted-rand': arand.item()}
     else:
         return cs
+
+
+def memory_usage_psutil():
+    # return the memory usage in MB
+    import psutil
+    process = psutil.Process(os.getpid())
+    mem = process.memory_info()[0] / float(2 ** 20)
+    return mem

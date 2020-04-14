@@ -61,13 +61,18 @@ class FeaturerLongRangeAffs(object):
         tick = time.time()
         offsets = self.offsets
         offsets_weights = self.offsets_weights
+        mask_used_edges = self.mask_used_edges
         if self.used_offsets is not None:
             assert len(self.used_offsets) < self.offsets.shape[0]
             offsets = self.offsets[self.used_offsets]
             affinities = affinities[self.used_offsets]
-            if isinstance(offsets_weights, (list, tuple)):
-                offsets_weights = np.array(offsets_weights)
-            offsets_weights = offsets_weights[self.used_offsets]
+            if offsets_weights is not None:
+                if isinstance(offsets_weights, (list, tuple)):
+                    offsets_weights = np.array(offsets_weights)
+                offsets_weights = offsets_weights[self.used_offsets]
+
+            if mask_used_edges is not None:
+                mask_used_edges = mask_used_edges[self.used_offsets]
 
         assert affinities.ndim == 4
         # affinities = affinities[:3]
@@ -110,7 +115,7 @@ class FeaturerLongRangeAffs(object):
             offset_probabilities=self.offset_probabilities,
             number_of_threads=self.n_threads,
             has_background_label=has_background_label,
-            mask_used_edges=self.mask_used_edges
+            mask_used_edges=mask_used_edges
         )
 
         if self.debug:

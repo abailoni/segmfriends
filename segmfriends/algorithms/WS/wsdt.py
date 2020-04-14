@@ -193,8 +193,6 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
             boundary_pixels_kwargs = boundary_pixels_kwargs if boundary_pixels_kwargs is not None else {}
             self.intersect = IntersectWithBoundaryPixels(offsets, **boundary_pixels_kwargs)
 
-
-
     def __call__(self, *inputs):
         """
         Here we expect real affinities (1: merge, 0: split).
