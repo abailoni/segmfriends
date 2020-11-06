@@ -1,3 +1,16 @@
+# ---------------- TEMP ----------------:
+import sys
+import os
+
+sys.path += [
+os.path.join("/home/abailoni_local/ialgpu1_local_home/pyCharm_projects/uppsala_hackathon"),
+os.path.join("/home_sdb/abailoni_tmp/local_copy_home/pyCharm_projects/uppsala_hackathon")
+]
+import vaeAffs
+from vaeAffs.utils.path_utils import change_paths_config_file, get_abailoni_hci_home_path
+
+# --------------------------------
+
 import sys
 from copy import deepcopy
 import os
@@ -111,18 +124,32 @@ if __name__ == '__main__':
     config_path = os.path.join(source_path, 'configs')
     experiments_path = os.path.join(source_path, 'runs')
 
+    # Update HCI_HOME paths:
+    for i, key in enumerate(sys.argv):
+        if "HCI__HOME" in sys.argv[i]:
+            sys.argv[i] = sys.argv[i].replace("HCI__HOME/", get_abailoni_hci_home_path())
+
+    # Update RUNS paths:
+    for i, key in enumerate(sys.argv):
+        if "RUNS__HOME" in sys.argv[i]:
+            sys.argv[i] = sys.argv[i].replace("RUNS__HOME", experiments_path)
+
+
     sys.argv[1] = os.path.join(experiments_path, sys.argv[1])
     if '--inherit' in sys.argv:
         i = sys.argv.index('--inherit') + 1
-        sys.argv[i] = os.path.join(config_path, sys.argv[i])
+        if sys.argv[i].endswith(('.yml', '.yaml')):
+            sys.argv[i] = change_paths_config_file(os.path.join(config_path, sys.argv[i]))
+        else:
+            sys.argv[i] = os.path.join(experiments_path, sys.argv[i])
     if '--update' in sys.argv:
         i = sys.argv.index('--update') + 1
-        sys.argv[i] = os.path.join(config_path, sys.argv[i])
+        sys.argv[i] = change_paths_config_file(os.path.join(config_path, sys.argv[i]))
     i = 0
     while True:
         if f'--update{i}' in sys.argv:
             ind = sys.argv.index(f'--update{i}') + 1
-            sys.argv[ind] = os.path.join(config_path, sys.argv[i])
+            sys.argv[ind] = change_paths_config_file(os.path.join(config_path, sys.argv[ind]))
             i += 1
         else:
             break

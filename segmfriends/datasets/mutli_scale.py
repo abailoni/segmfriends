@@ -7,6 +7,7 @@ try:
     from inferno.io.transform.generic import AsTorchBatch
     from inferno.io.transform.volume import RandomFlip3D, VolumeAsymmetricCrop
     from inferno.io.transform.image import RandomRotate, ElasticTransform
+    from torch.utils.data.dataloader import default_collate
 except ImportError:
     raise ImportError("CremiDataset requires inferno")
 
@@ -21,10 +22,10 @@ from ..utils.various import yaml2dict
 from ..transform.volume import DownSampleAndCropTensorsInBatch, ReplicateTensorsInBatch
 from ..transform.affinities import affinity_config_to_transform, Segmentation2AffinitiesDynamicOffsets
 
-
 class MultiScaleDataset(Zip):
     def __init__(self, name, volume_config, slicing_config,
-                 transform_config=None):
+                 transform_config=None,
+                 inference_mode=False):
         assert isinstance(volume_config, dict)
         assert isinstance(slicing_config, dict)
         assert 'volume_keys_to_load' in volume_config
@@ -41,16 +42,19 @@ class MultiScaleDataset(Zip):
             current_volume_kwargs.update(volume_config.get(volume_key, {}))
             dtype = current_volume_kwargs.get("dtype")
             dtype = dtype[name] if isinstance(dtype, dict) else dtype
+            if inference_mode:
+                current_volume_kwargs["return_index_spec"] = True
             if dtype == "float32":
                 volumes_to_load.append(RawVolume(name=name,
                                                  **current_volume_kwargs))
-            elif dtype == "int32":
+            elif dtype == "int32" or dtype == "int64":
                 volumes_to_load.append(SegmentationVolume(name=name,
                                                           **current_volume_kwargs))
             else:
                 raise ValueError("Atm only float32 and int32 datasets are supported. {} was given".format(dtype ))
 
         super().__init__(*volumes_to_load,
+                         return_index_spec=inference_mode,
                          sync=True)
 
         # Set master config (for transforms)
@@ -113,8 +117,16 @@ class MultiScaleDataset(Zip):
         config = yaml2dict(config)
         name = config.get('dataset_name')
         volume_config = config.get('volume_config')
-        slicing_config = config.get('slicing_config')
+        slicing_config = config.get('slicing_config', {})
         transform_config = config.get('transform_config')
+        inference_mode = config.get('inference_mode')
         return cls(name, volume_config=volume_config,
                    slicing_config=slicing_config,
-                   transform_config=transform_config)
+                   transform_config=transform_config,
+                   inference_mode=inference_mode)
+
+
+def collate_indices(batch):
+    tensor_list = [itm[0] for itm in batch]
+    indices_list = [itm[1] for itm in batch]
+    return default_collate(tensor_list), indices_list
