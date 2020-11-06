@@ -7,6 +7,7 @@ except ImportError:
     raise ImportError("Volume transforms requires inferno")
 
 from ..utils.various import parse_data_slice
+from .filters import downscale, countless3d
 
 
 class DuplicateGtDefectedSlices(Transform):
@@ -97,6 +98,7 @@ class DownSampleAndCropTensorsInBatch(Transform):
                  crop_factor=None,
                  crop_slice=None,
                  order=None,
+                 use_countless=False,
                  **super_kwargs):
         """
         :param ds_factor: If factor is 2, then downscaled to half-resolution
@@ -117,34 +119,40 @@ class DownSampleAndCropTensorsInBatch(Transform):
             crop_slice = parse_data_slice(crop_slice)
         self.crop_factor = crop_factor
         self.crop_slice = crop_slice
+        self.use_countless = use_countless
 
     def volume_function(self, volume):
+        # Crop:
+        if self.crop_factor is not None:
+            shape = volume.shape
+            cropped_shape = [int(shp / crp_fct) for shp, crp_fct in zip(shape, self.crop_factor)]
+            offsets = [int((shp - crp_shp) / 2) for shp, crp_shp in zip(shape, cropped_shape)]
+            crop_slc = tuple(slice(off, off + crp_shp) for off, crp_shp in zip(offsets, cropped_shape))
+            volume = volume[crop_slc]
+
+        # Crop using the passed crop_slice:
+        if self.crop_slice is not None:
+            volume = volume[self.crop_slice]
+
         # Downscale the volume:
-        downscaled = volume
         if (np.array(self.ds_factor) != 1).any():
-            order = self.order
             if self.order is None:
                 if volume.dtype in [np.dtype('float32'), np.dtype('float64')]:
-                    order = 3
+                    volume = downscale(volume, self.ds_factor, filter="box")
                 elif volume.dtype in [np.dtype('int8'), np.dtype('int16'), np.dtype('int32'), np.dtype('int64')]:
-                    order = 0
+                    ndim = volume.ndim
+                    ds_factor = [self.ds_factor for _ in range(ndim)] if isinstance(self.ds_factor, int) else \
+                        self.ds_factor
+                    if self.use_countless:
+                        assert ds_factor == [2,2,2], "Only 3d countless supported for the moment"
+                        volume = countless3d(volume)
+                    else:
+                        ds_slice = tuple(slice(None, None, ds_factor[d]) for d in range(ndim))
+                        volume = volume[ds_slice]
                 else:
                     raise ValueError
-            downscaled = zoom(volume, tuple(1./fct for fct in self.ds_factor), order=order)
 
-        # Crop:
-        cropped = downscaled
-        if self.crop_factor is not None:
-            shape = downscaled.shape
-            cropped_shape = [int(shp/crp_fct) for shp, crp_fct in zip(shape, self.crop_factor)]
-            offsets = [int((shp-crp_shp)/2) for shp, crp_shp in zip(shape, cropped_shape)]
-            crop_slc = tuple(slice(off, off+crp_shp) for off, crp_shp in zip(offsets, cropped_shape))
-            cropped = downscaled[crop_slc]
-
-        if self.crop_slice is not None:
-            # Crop using the passed crop_slice:
-            cropped = cropped[self.crop_slice]
-        return cropped
+        return volume
 
     def apply_to_torch_tensor(self, tensor):
         assert tensor.ndimension() == 5
