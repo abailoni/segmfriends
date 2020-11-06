@@ -330,7 +330,14 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
 
         image_shape = affinities.shape[1:]
 
+        from ...utils.various import memory_usage_psutil
+        import time
+
         # Build graph:
+        extra_out_dict = {}
+        start_mem = memory_usage_psutil()
+        extra_out_dict["starting_mem"] = start_mem
+        tick = time.time()
         graph, is_local_edge, _, edge_sizes = \
             build_pixel_lifted_graph_from_offsets(
                 image_shape,
@@ -341,6 +348,8 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
                 strides=self.strides,
                 mask_used_edges=mask_used_edges
             )
+        extra_out_dict["graph_mem"] = memory_usage_psutil() - start_mem
+        extra_out_dict["graph_runtime"] = time.time() - tick
 
         # Build policy:
         edge_weights = graph.edgeValues(np.rollaxis(affinities, 0, 4))
@@ -389,7 +398,8 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
             # negative_weights = signed_weights * np.logical_and(np.logical_not(is_local_edge), signed_weights < 0)
             # signed_weights = positive_weights + negative_weights
 
-
+        start_mem = memory_usage_psutil()
+        tick = time.time()
         nodeSeg, out_dict = \
             runGreedyGraphEdgeContraction(graph, signed_weights,
                                           edge_sizes=edge_sizes,
@@ -398,6 +408,10 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
                                           return_agglomeration_data=True,
                                           ignored_edge_weights=ignored_edge_weights,
                                           **self.extra_aggl_kwargs)
+        extra_out_dict["agglo_mem"] = memory_usage_psutil() - start_mem
+        extra_out_dict["agglo_runtime"] = time.time() - tick
+        extra_out_dict["nb_nodes"] = graph.numberOfNodes
+        extra_out_dict["nb_edges"] = graph.numberOfEdges
 
         if self.return_UCM:
             edge_IDs = graph.mapEdgesIDToImage()
@@ -422,6 +436,10 @@ class GreedyEdgeContractionAgglomerater(GreedyEdgeContractionAgglomeraterBase):
         segmentation = nodeSeg.reshape(image_shape)
 
         out_dict['MC_energy'] = MC_energy
+
+        extra_out_dict["final_mem"] = memory_usage_psutil()
+        out_dict.update(extra_out_dict)
+
         return segmentation, out_dict
 
 

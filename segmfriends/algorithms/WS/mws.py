@@ -1,5 +1,5 @@
 from nifty.segmentation import compute_mws_segmentation
-
+import numpy as np
 
 class MutexWatershed(object):
     def __init__(self, offsets, stride,
@@ -40,10 +40,26 @@ class MutexWatershed(object):
         if self.invert_affinities:
             affinities = 1. - affinities
 
-        segmentation = compute_mws_segmentation(affinities, self.offsets, self.seperating_channel,
+        from ...utils.various import memory_usage_psutil
+        import time
+
+        # Build graph:
+        extra_out_dict = {}
+        start_mem = memory_usage_psutil()
+        extra_out_dict["starting_mem"] = start_mem
+        tick = time.time()
+        segmentation, nb_edges = compute_mws_segmentation(affinities, self.offsets, self.seperating_channel,
                                      strides=self.stride, randomize_strides=self.randomize_bounds, invert_repulsive_weights=self.invert_dam_channels,
                                      bias_cut=0., mask=None,
                                      algorithm='kruskal')
+        extra_out_dict["agglo_mem"] = memory_usage_psutil() - start_mem
+        extra_out_dict["agglo_runtime"] = time.time() - tick
+        extra_out_dict["nb_nodes"] = np.prod(segmentation.shape).item()
+        print("Number of affinities", affinities.shape[0])
+        extra_out_dict["nb_edges"] = nb_edges.item()
+        extra_out_dict["final_mem"] = memory_usage_psutil()
+        out_dict = {'MC_energy': np.array([0]), 'runtime': 0.}
+        out_dict.update(extra_out_dict)
 
         # # Apply bias (0.0: merge everything; 1.0: split everything, or what can be split)
         # affinities[:self.seperating_channel] -= 2 * (self.bias - 0.5)
@@ -54,4 +70,6 @@ class MutexWatershed(object):
         #                                                          self.n_threads)
         # else:
         #     segmentation, _ = self.damws_superpixel(affinities)
-        return segmentation
+
+
+        return segmentation, out_dict
