@@ -191,10 +191,13 @@ def writeHDF5(data, path, inner_path, compression='gzip'):
             del f[inner_path]
         f.create_dataset(inner_path, data=data, compression=compression)
 
-def getHDF5datasets(path):
-    # TODO: expand to sub-levels
+
+def get_hdf5_inner_paths(path, inner_path=None):
     with h5py.File(path, 'r') as f:
-        datasets = [dt for dt in f]
+        if inner_path is None:
+            datasets = [dt for dt in f]
+        else:
+            datasets = [dt for dt in f[inner_path]]
     return datasets
 
 
@@ -240,3 +243,12 @@ def memory_usage_psutil():
     process = psutil.Process(os.getpid())
     mem = process.memory_info()[0] / float(2 ** 20)
     return mem
+
+
+def make_dimensions_even(array):
+    """Make sure that the dimensions are even"""
+    # TODO: generalize to general factors
+    for d, shp in enumerate(array.shape):
+        if shp % 2 != 0:
+            array = array[tuple(slice(0, -1 if i == d else None) for i in range(array.ndim))]
+    return array
