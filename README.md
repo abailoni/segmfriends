@@ -6,7 +6,7 @@ Bunch of tools and experiments for image segmentation
 ### Basic version
 This version can run most of the clustering/segmentation algorithms included:
 
-- `conda create -n segmFr -c abailoni -c conda-forge nifty vigra cython`
+- `conda create -n segmFr -c abailoni -c conda-forge nifty=1.0.9 vigra cython`
 - `source activate segmFr`
 - `python setup.py install` (or `python setup.py develop` if you plan to work on the package)
 
