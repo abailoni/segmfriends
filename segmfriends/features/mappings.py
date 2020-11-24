@@ -13,30 +13,8 @@ def map_features_to_label_array(label_array, features, ignore_label=-1,
     :param fill_value: the fill value used in the mapped array to replace the ignore_label
     :return:
     """
-    # TODO: deprecate
+    # TODO: deprecate and directly use veersion in nifty
     return ntools.mapFeaturesToLabelArray(label_array, features, ignore_label, fill_value, number_of_threads)
-
-
-    # # if label_array.ndim != 3:
-    # #     raise NotImplementedError("Bug in nifty function...!")
-    #
-    # if ignore_label is None:
-    #     ignore_label = -1
-    # if number_of_threads==1:
-    #     try:
-    #         from .mappings_CY import map_features_to_label_array as map_features_to_label_array_CY
-    #     except ImportError:
-    #         raise ImportError("Cython module should be compiled first")
-    #     # Using faster cython version:
-    #     return map_features_to_label_array_CY(label_array, features, ignore_label,
-    #                             fill_value)
-    # else:
-    #     # Using multi-threaded nifty version:
-    #     return nrag.mapFeaturesToLabelArray(label_array.astype(np.int64),
-    #                                         features.astype(np.float64),
-    #                                         ignore_label,
-    #                                         fill_value,
-    #                                         numberOfThreads=number_of_threads)
 
 
 def map_edge_features_to_image(offsets, edge_features, rag=None, label_image=None, contractedRag=None,

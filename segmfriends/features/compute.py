@@ -8,12 +8,26 @@ def accumulate_affinities_on_graph_edges(affinities, offsets, label_image, graph
                                          mode="mean",
                                          number_of_threads=6,
                                          offsets_weights=None):
-    # TODO: Create class and generalize...
     """
     Label image or graph should be passed. Using nifty rag or undirected graph.
 
     :param affinities: expected to have the offset dimension as last/first one
+
+
+    DEPRECATED: use nifty version:
+
+    edge_indicators, edge_sizes = nrag.accumulate_affinities_mean_and_length(
+            affinities,
+            offsets,
+            segmentation,
+            graph=lifted_graph,
+            offset_weights=offsets_weights,
+            ignore_label=None, number_of_threads=self.n_threads
+        )
     """
+    raise DeprecationWarning("Use version in nifty instead")
+
+
     assert mode in ['mean', 'max'], "Only max and mean are implemented"
     assert contractedRag is None, "Contracted graph was deprecated"
 

@@ -11,11 +11,11 @@ from ..segm_pipeline import SegmentationPipeline
 from ...features.utils import probs_to_costs
 from ...transform.segm_to_bound import compute_mask_boundaries_graph
 
-from nifty.segmentation import compute_mws_clustering, compute_single_linkage_clustering
+# from nifty.segmentation import compute_mws_clustering, compute_single_linkage_clustering
 
 import time
 
-# TODO: rename to GASP
+# TODO: delete (use version in GASP repo)
 
 class GreedyEdgeContractionClustering(SegmentationPipeline):
     def __init__(self, offsets, fragmenter=None,
@@ -44,6 +44,7 @@ class GreedyEdgeContractionClustering(SegmentationPipeline):
           - it expects REAL affinities (1.0 = merge, 0. = not merge).
             If the opposite is passed, use `invert_affinities`
         """
+        raise DeprecationWarning("use version in GASP repo instead")
         # TODO: add option to pass directly a segmentation (not only affinities)
         if fragmenter is not None:
             agglomerater = GreedyEdgeContractionAgglomeraterFromSuperpixels(
@@ -109,6 +110,8 @@ class GreedyEdgeContractionAgglomeraterBase(object):
                  - {name: 'smooth_max', p=2.0}   # 0.0 is mean
 
                 """
+        raise DeprecationWarning("use version in GASP repo instead")
+
         if isinstance(offsets, list):
             offsets = np.array(offsets)
         else:
@@ -445,6 +448,7 @@ def runGreedyGraphEdgeContraction(
     Returns node_labels and runtime. If return_UCM == True, then also returns the UCM and the merging iteration for
     every edge.
     """
+    raise DeprecationWarning("use version in GASP repo instead")
     # Legacy:
     if "update_rule" in run_kwargs:
         update_rule = run_kwargs.pop("update_rule")

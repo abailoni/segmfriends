@@ -3,7 +3,7 @@
 from .WS import WatershedOnDistanceTransformFromAffinities, MutexWatershed, WatershedFromAffinities
 from .agglo import GreedyEdgeContractionAgglomeraterFromSuperpixels, GreedyEdgeContractionClustering
 from .multicut import Multicut, MulticutPipelineFromAffinities
-from ..features.featurer import FeaturerLongRangeAffs
+from GASP.affinities import AccumulatorLongRangeAffs
 
 from copy import deepcopy
 
@@ -61,11 +61,11 @@ def get_segmentation_pipeline(
         segm_pipeline = fragmenter
     elif segm_pipeline_type == 'multicut':
 
-        featurer = FeaturerLongRangeAffs(offsets, n_threads=nb_threads,
+        featurer = AccumulatorLongRangeAffs(offsets, n_threads=nb_threads,
                                          offsets_weights=multicut_kwargs.get('offsets_weights'),
                                          used_offsets=multicut_kwargs.get('used_offsets'),
                                          invert_affinities= not invert_affinities,
-                                         debug=False,
+                                         verbose=False,
                                          return_dict=True,
                                          offset_probabilities=multicut_kwargs.get('offsets_probabilities', 1.0)
                                          )

@@ -22,6 +22,7 @@ class SizeThreshAndGrowWithWS(object):
         :param apply_WS_growing: if False, then the 'seed_mask' is returned
         :param size_of_2d_slices: compute size for all z-slices (memory efficient)
         """
+        raise DeprecationWarning("Use version in GASP repo instead")
         self.size_threshold = size_threshold
         self.invert_affinities = invert_affinities
         self.offsets = offsets

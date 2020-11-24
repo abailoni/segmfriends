@@ -17,6 +17,7 @@ def compute_mask_boundaries_graph(offsets, graph=None, label_image=None, contrac
 
     :return: in bound_IDs inner affinities have ID = -1
     """
+    raise DeprecationWarning("Nifty function boundaryMaskLongRange is no longer implemented")
     assert label_image is not None or graph is not None
     if contractedRag is not None:
         assert graph is not None

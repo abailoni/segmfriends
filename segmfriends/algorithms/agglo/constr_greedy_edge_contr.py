@@ -31,6 +31,7 @@ class constrained_fixation_clustering(object):
             * if computeLossData==False, expensive backtracking of edge-union-find is avoided
 
         '''
+        raise DeprecationWarning()
         if ignore_label is None:
             # ignore_label = np.uint64(-1)
             ignore_label = -1

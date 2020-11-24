@@ -1,4 +1,4 @@
-from nifty.segmentation import compute_mws_segmentation
+from affogato.segmentation import compute_mws_segmentation
 
 
 class MutexWatershed(object):
