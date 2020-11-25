@@ -1,31 +1,29 @@
-from pathutils import get_home_dir, change_paths_config_file
-
+from pathutils import get_home_dir, get_trendytukan_drive_dir, change_paths_config_file
 import sys
+import numpy as np
+
+
+from speedrun import BaseExperiment, TensorboardMixin, AffinityInferenceMixin
+
 from copy import deepcopy
+
 import os
 import torch
 
-# Imports for models/criteria
-import neurofire
-import confnets
-import inferno
-import segmfriends
-
-
-from inferno.io.transform import Compose
-from neurofire.criteria.loss_wrapper import LossWrapper
-from speedrun import BaseExperiment, TensorboardMixin, InfernoMixin
-from speedrun.log_anywhere import register_logger
-from speedrun.py_utils import create_instance
-
 from segmfriends.utils.config_utils import recursive_dict_update
+from segmfriends.utils.various import check_dir_and_create
+from segmfriends.utils.various import writeHDF5
+
+from neurofire.criteria.loss_wrapper import LossWrapper
+from inferno.io.transform import Compose
+
+
+from speedrun.py_utils import create_instance
 from segmfriends.datasets.cremi import get_cremi_loader
 
-
-# torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = True
 
-class BaseCremiExperiment(BaseExperiment, InfernoMixin, TensorboardMixin):
+class BaseCremiExperiment(BaseExperiment, AffinityInferenceMixin):
     def __init__(self, experiment_directory=None, config=None):
         super(BaseCremiExperiment, self).__init__(experiment_directory)
         # Privates
@@ -34,16 +32,27 @@ class BaseCremiExperiment(BaseExperiment, InfernoMixin, TensorboardMixin):
         if config is not None:
             self.read_config_file(config)
 
-
         self.DEFAULT_DISPATCH = 'train'
         self.auto_setup()
 
-        # register_logger(FirelightLogger, "image")
-        register_logger(self, 'scalars')
-
-        self.model_class = self.get('model/model_class')
-
         self.set_devices()
+
+        # self.build_infer_loader()
+        if "model_class" in self.get('model'):
+            self.model_class = self.get('model/model_class')
+        else:
+            self.model_class = list(self.get('model').keys())[0]
+
+    def set_devices(self):
+        # # --------- In case of multiple GPUs: ------------
+        # n_gpus = torch.cuda.device_count()
+        # gpu_list = range(n_gpus)
+        # self.set("gpu_list", gpu_list)
+        # self.trainer.cuda(gpu_list)
+
+        # --------- Debug on trendytukan, force to use only GPU 0: ------------
+        self.set("gpu_list", [0])
+        self.trainer.cuda([0])
 
     def build_model(self, model_config=None):
         model_config = self.get('model') if model_config is None else model_config
@@ -86,17 +95,6 @@ class BaseCremiExperiment(BaseExperiment, InfernoMixin, TensorboardMixin):
         self._trainer.build_criterion(criterion)
         self._trainer.build_validation_criterion(criterion)
 
-    def set_devices(self):
-        # # --------- In case of multiple GPUs: ------------
-        # n_gpus = torch.cuda.device_count()
-        # gpu_list = range(n_gpus)
-        # self.set("gpu_list", gpu_list)
-        # self.trainer.cuda(gpu_list)
-
-        # --------- Debug on trendytukan, force to use only GPU 0: ------------
-        self.set("gpu_list", [0])
-        self.trainer.cuda([0])
-
     def build_train_loader(self):
         kwargs = recursive_dict_update(self.get('loaders/train'), deepcopy(self.get('loaders/general')))
         return get_cremi_loader(kwargs)
@@ -105,6 +103,32 @@ class BaseCremiExperiment(BaseExperiment, InfernoMixin, TensorboardMixin):
         kwargs = recursive_dict_update(self.get('loaders/val'), deepcopy(self.get('loaders/general')))
         return get_cremi_loader(kwargs)
 
+
+    def build_infer_loader(self):
+        kwargs = deepcopy(self.get('loaders/infer'))
+        loader = get_cremi_loader(kwargs)
+        return loader
+
+    def save_infer_output(self, output):
+        print("Saving....")
+        if self.get("export_path") is not None:
+            dir_path = os.path.join(self.get("export_path"),
+                                    self.get("name_experiment", default="generic_experiment"))
+        else:
+            try:
+                # Only works for my experiments saving on trendyTukan, otherwise it will throw an error:
+                trendyTukan_path = get_trendytukan_drive_dir()
+            except ValueError:
+                raise ValueError("TrendyTukan drive not found. Please specify an `export_path` in the config file.")
+            dir_path = os.path.join(trendyTukan_path, "projects/pixel_embeddings", self.get("name_experiment", default="generic_experiment"))
+        check_dir_and_create(dir_path)
+        filename = os.path.join(dir_path, "predictions_sample_{}.h5".format(self.get("loaders/infer/name")))
+        print("Writing to ", self.get("inner_path_output", 'data'))
+        writeHDF5(output.astype(np.float16), filename, self.get("inner_path_output", 'data'))
+        print("Saved to ", filename)
+
+        # Dump configuration to export folder:
+        self.dump_configuration(os.path.join(dir_path, "prediction_config.yml"))
 
 if __name__ == '__main__':
     print(sys.argv[1])
@@ -122,7 +146,6 @@ if __name__ == '__main__':
     for i, key in enumerate(sys.argv):
         if "RUNS__HOME" in sys.argv[i]:
             sys.argv[i] = sys.argv[i].replace("RUNS__HOME", experiments_path)
-
 
     sys.argv[1] = os.path.join(experiments_path, sys.argv[1])
     if '--inherit' in sys.argv:
@@ -143,5 +166,4 @@ if __name__ == '__main__':
         else:
             break
     cls = BaseCremiExperiment
-    cls().run()
-
+    cls().infer()

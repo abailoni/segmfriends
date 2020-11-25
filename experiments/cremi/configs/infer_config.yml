@@ -1,0 +1,61 @@
+# This config should be combined for example with "example_train_affs_dowscaled_data.yml"
+
+shortcuts:
+  z_size: &z_size 12
+  xy_size: &xy_size 272
+  padding: &dataset_padding [[0,0], [50,50], [50,50]]
+
+
+loaders:
+  infer:
+    inference_mode: True
+    loader_config:
+      # Number of processes to use for loading data. Set to (say) 10 if you wish to
+      # use 10 CPU cores, or to 0 if you wish to use the same process for training and
+      # data-loading (generally not recommended).
+      batch_size: 1
+      num_workers: 4
+      drop_last: False
+      #      pin_memory: False
+      shuffle: False
+    name: C
+
+    volume_config:
+      # Sliding window size
+      window_size:
+        - *z_size
+        - *xy_size
+        - *xy_size
+      stride: [40, 40, 40] # Not needed anymore, automatically deduced during inference
+      data_slice: ':15,:,:'
+      padding_mode: "reflect"
+      padding:
+        A: *dataset_padding
+        B: *dataset_padding
+        C: *dataset_padding
+      path:
+        A: '$HCI_HOME/datasets/CREMI/padded_data/sample_A_2x.h5'
+        B: '$HCI_HOME/datasets/CREMI/padded_data/sample_B_2x.h5'
+        C: '$HCI_HOME/datasets/CREMI/padded_data/sample_C_2x.h5'
+      path_in_file: 'volumes/raw'
+      dtype: float32
+
+inference:
+  # How much I crop the predicted tensor: (local_crop in the output resolution)
+  crop_prediction:
+    - [2,2]
+    - [24,24]
+    - [24,24]
+
+  # Make sure to exclude the invalid affinities
+  return_patch_mask: False
+
+  # Change this if the resolution of the output is different from the input:
+  output_dws_fact: [1, 1, 1]
+
+  # Should the predicted patches overlap? If yes, by how much?
+  # then blending will be
+  window_overlap: [1, 30, 30]
+  blending_kwargs:
+    dim: 3
+

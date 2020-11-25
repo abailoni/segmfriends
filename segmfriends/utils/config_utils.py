@@ -173,3 +173,62 @@ def assign_color_to_table_value(value, good_thresh, bad_thresh, nb_flt, best="lo
             return '{{\color{{Red}} {num:.{prec}f} }}'.format(prec=nb_flt, num=value)
     else:
         raise ValueError
+
+
+def recursively_get_cmd(list_of_args, cmd_base_string, current_cmd=None, accumulated_cmds=None):
+    current_cmd = [] if current_cmd is None else current_cmd
+    accumulated_cmds = [] if accumulated_cmds is None else accumulated_cmds
+    current_arg_spec_indx = len(current_cmd)
+
+    if current_arg_spec_indx == len(list_of_args):
+        # We are done, compose the command:
+        new_cmd = cmd_base_string
+        for i, arg_spec in enumerate(list_of_args):
+            for nb_arg, arg_name in enumerate(arg_spec[0]):
+                new_arg_str = current_cmd[i][nb_arg]
+                if "///" in new_arg_str:
+                    new_arg_str = new_arg_str.split("///")[0]
+
+                new_cmd += " {} {}".format(arg_name, new_arg_str)
+        accumulated_cmds.append(new_cmd)
+
+    elif current_arg_spec_indx < len(list_of_args):
+        # Here we add all options at current level and then recursively go deeper:
+        current_arg_spec = list_of_args[current_arg_spec_indx]
+        total_current_options = len(current_arg_spec[1])
+
+        for nb_option in range(total_current_options):
+            new_cmd_entry = []
+            for arg in current_arg_spec[1:]:
+                assert len(arg) == total_current_options, "All args  passed in the same entry should have the same number of options! {}, {}".format(arg, total_current_options)
+                if isinstance(arg[nb_option], str):
+                    # Here we simply append the string:
+                    new_cmd_entry.append(arg[nb_option])
+                else:
+                    # Format the string from previously chosen options:
+                    assert isinstance(arg[nb_option], tuple)
+                    assert len(arg[nb_option]) >= 2
+
+                    collected_format_args = []
+                    for format_args in arg[nb_option][1:]:
+                        indx1, indx2 = format_args.split(":")
+                        assert int(indx1) < current_arg_spec_indx
+                        collected_str = current_cmd[int(indx1)][int(indx2)]
+                        if "///" in collected_str:
+                            collected_str = collected_str.split("///")[1]
+                        collected_format_args.append(collected_str)
+
+                    # Compose new command entry:
+                    actual_string = arg[nb_option][0]
+                    # if "///" in actual_string:
+                    #     actual_string = actual_string.split("///")[0]
+                    new_cmd_entry.append(actual_string.format(*collected_format_args))
+            # Recursively go deeper:
+            accumulated_cmds = recursively_get_cmd(list_of_args,
+                                                   cmd_base_string,
+                                                   current_cmd=current_cmd+[new_cmd_entry],
+                                                   accumulated_cmds=accumulated_cmds)
+    else:
+        raise ValueError("Something went wrong")
+
+    return accumulated_cmds

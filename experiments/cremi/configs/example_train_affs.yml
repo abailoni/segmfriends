@@ -1,8 +1,12 @@
+# Use "KeyDeleter" string if you want to delete a parameter that was set from an inherited config.
+
+
 shortcuts:
   z_size: &z_size 12
   xy_size: &xy_size 272
   xy_size_precrop: &xy_size_precrop 302
   stride: &stride [10, 180, 180]
+  padding: &dataset_padding [[0,0], [50,50], [50,50]]
 
 device: cuda
 
