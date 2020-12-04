@@ -15,7 +15,7 @@ def build_lifted_graph_from_rag(rag,
                                 number_of_threads=8,
                                 has_background_label=False,
                                 mask_used_edges=None):
-
+    raise DeprecationWarning("User updated function in GASP repo")
     if isinstance(offset_probabilities, np.ndarray):
         only_local = all(offset_probabilities == 0.)
     else:
@@ -91,6 +91,7 @@ def build_pixel_lifted_graph_from_offsets(image_shape,
     :param nb_local_offsets: UPDATE AND GENERALIZE!
     :param downscaling_factor: If a list [1,2,2] is given, then the image resolution is scaled down first
     """
+    raise DeprecationWarning("User updated function in GASP repo")
     if downscaling_factor is not None:
         raise NotImplementedError()
 

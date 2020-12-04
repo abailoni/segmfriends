@@ -1,3 +1,11 @@
+"""
+
+THESE CLASSES ARE DEPRECATED
+
+"""
+
+
+
 from nifty.graph import rag as nrag
 import nifty.graph.agglo as nagglo
 import numpy as np

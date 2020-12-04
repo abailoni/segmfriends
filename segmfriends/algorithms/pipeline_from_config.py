@@ -93,6 +93,7 @@ def get_segmentation_pipeline(
 
 
     elif segm_pipeline_type == 'gen_HC':
+        raise DeprecationWarning("Update and use GASP package")
         HC_kwargs = generalized_HC_kwargs
 
         if not post_proc_config.get('start_from_given_segm', False):
