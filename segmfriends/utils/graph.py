@@ -5,7 +5,28 @@ from nifty import graph as ngraph
 from nifty.graph import undirectedLongRangeGridGraph
 import warnings
 
-from ..features import accumulate_affinities_on_graph_edges
+def convert_graph_to_metis_format(graph, edge_weights, path_output_file):
+    "Metis input/output formats for I/O: https://www.cc.gatech.edu/dimacs10/data/manual.ps (section 4.5.1)"
+    # TODO: generalize to version with node_weights
+    uv_ids = graph.uvIds()
+    assert uv_ids.shape[0] == edge_weights.shape[0]
+
+    with open(path_output_file, "w") as f:
+        # Write the first line:
+        # 0: unweighted graph
+        # 1: weighted edges
+        # 10: weighted vertices
+        # 11: weighted edges and vertices
+        f.write("{} {} 1\n".format(graph.numberOfNodes, graph.numberOfEdges))
+
+        # Loop through nodes:
+        nb_nodes = graph.numberOfNodes
+
+        for node in range(nb_nodes):
+            for nghID, edgeID in graph.nodeAdjacency(node):
+                f.write("{} {} ".format(nghID+1, repr(edge_weights[edgeID])))
+            f.write("\n")
+
 
 
 def build_lifted_graph_from_rag(rag,

@@ -252,3 +252,35 @@ def make_dimensions_even(array):
         if shp % 2 != 0:
             array = array[tuple(slice(0, -1 if i == d else None) for i in range(array.ndim))]
     return array
+
+
+def convert_array_from_float_to_uint(float_array, convert_to="uint16", rescale=False):
+    """
+    By default, it requires values between 0 and 1. Otherwise it rescales both max and min to fit all
+    interval.
+
+
+    UInt16: from 0 to 65535
+    UInt32: from 0 to 4294967295
+    """
+    if not rescale:
+        assert np.all(np.logical_and(float_array < 1.0, float_array > 0.))
+    else:
+        # Shift to zero:
+        min_array = float_array.min()
+        float_array -= min_array
+
+        # Normalize between 0 and 1:
+        max_array = float_array.max()
+        float_array /= max_array
+
+    if convert_to == "uint16":
+        max_uint = 65535
+    elif convert_to == "uint32":
+        max_uint = 4294967295
+    elif convert_to == "uint8":
+        max_uint = 255
+    else:
+        raise ValueError()
+
+    return (float_array * max_uint).astype(convert_to)
