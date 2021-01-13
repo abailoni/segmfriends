@@ -6,9 +6,10 @@ Bunch of tools and experiments for image segmentation
 ### Basic version
 This version can run most of the clustering/segmentation algorithms included:
 
-- `conda create -n segmFr -c abailoni -c conda-forge nifty vigra cython affogato`
+- `conda create -n segmFr -c abailoni -c conda-forge nifty vigra cython`
 - `source activate segmFr`
-- `conda install GASP` (or install directly from [here](https://github.com/abailoni/GASP))
+- `conda install -c abailoni GASP` (or install directly from [here](https://github.com/abailoni/GASP))
+- `conda install -c cpape affogato`
 - `python setup.py install` (or `python setup.py develop` if you plan to work on the package)
 
 ### Full version
