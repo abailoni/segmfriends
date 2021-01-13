@@ -18,6 +18,8 @@ loaders:
       drop_last: False
       #      pin_memory: False
       shuffle: False
+
+    # Which CREMI sample should be used for inference:
     name: C
 
     volume_config:
@@ -59,4 +61,8 @@ inference:
   window_overlap: [1, 30, 30]
   blending_kwargs:
     dim: 3
+
+  # If your model outputs more than one tensor, use this parameter to select the wanted one
+  # TODO: implement multi-output version of the engine
+  index_output: 0
 
