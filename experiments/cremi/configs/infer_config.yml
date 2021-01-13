@@ -47,14 +47,15 @@ inference:
     - [24,24]
     - [24,24]
 
-  # Make sure to exclude the invalid affinities
+  # Make sure to exclude the invalid affinities:
+  # your model can return a second output tensor that should be a binary tensor indicating with outputs are valid and
+  #  which are not
   return_patch_mask: False
 
   # Change this if the resolution of the output is different from the input:
   output_dws_fact: [1, 1, 1]
 
   # Should the predicted patches overlap? If yes, by how much?
-  # then blending will be
   window_overlap: [1, 30, 30]
   blending_kwargs:
     dim: 3
