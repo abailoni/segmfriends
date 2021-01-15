@@ -10,19 +10,21 @@ from GASP.segmentation.GASP.run_from_affinities import GaspFromAffinities
 from GASP.segmentation.GASP.core import run_GASP
 
 
-METHOD_NAME = "maskAffs_all_edges"
+METHOD_NAME = "maskAffs_all_edges_test"
 
 dataset = os.path.join(get_trendytukan_drive_dir(), "datasets/CREMI/crop_mask_emb_predictions/crop_maskEmb_affs_cremi_val_sample_C.h5")
 
-# crop_slice = parse_data_slice("10:18,:200,:200")
-crop_slice = parse_data_slice(":")
+crop_slice = parse_data_slice("10:12,:200,:200")
+# crop_slice = parse_data_slice(":")
 print(get_hdf5_inner_paths(dataset))
 cremi_affs = readHDF5(dataset, "affinities_mask_average", crop_slice=(slice(None),) + crop_slice).astype('float32')
 # cremi_affs = readHDF5(dataset, "affinities_dice", crop_slice=(slice(None),) + crop_slice).astype('float32')
 GT = readHDF5(dataset, "GT", crop_slice=crop_slice)
 raw = readHDF5(dataset, "raw", crop_slice=crop_slice)
 
-
+# Add some random noise:
+cremi_affs += np.random.normal(0,0.01,size=cremi_affs.shape)
+cremi_affs = np.clip(cremi_affs, 0, 1)
 
 offsets = [
     [-1, 0, 0],
@@ -66,7 +68,7 @@ offsets = [
 
 # Reduce number of long-range edges:
 offsets_prob = np.ones((len(offsets)), dtype='float32')
-offsets_prob[3:] = 1
+offsets_prob[3:] = 1.
 
 # print("Done")
 #
@@ -94,7 +96,7 @@ graph_path = os.path.join(path_label_prop_dir, "signed_cremi.graph")
 out_segm_path = os.path.join(path_label_prop_dir, "out_segm/signed_cremi.segm")
 label_prp_exe = os.path.join(path_label_prop_dir, "deploy/label_propagation")
 
-run_label_prop_command = "{} {} --cluster_upperbound=500 --label_propagation_iterations=400 --output_filename={}".format(label_prp_exe, graph_path, out_segm_path)
+run_label_prop_command = "{} {} --cluster_upperbound=400 --label_propagation_iterations=100 --output_filename={}".format(label_prp_exe, graph_path, out_segm_path)
 
 import subprocess
 
@@ -110,7 +112,8 @@ def compute_stacked_sp(z):
     print("Running label prop...")
     process = subprocess.Popen(run_label_prop_command, shell=True, stdout=subprocess.PIPE)
     process.wait()
-    print(process.returncode)
+    stdout = process.communicate()[0]
+    print(stdout)
 
     print("Saving...")
     segm_result_nodes = np.genfromtxt(out_segm_path, delimiter=',')
@@ -141,8 +144,8 @@ import matplotlib.pyplot as plt
 from segmfriends.vis import plot_segm, get_figure, save_plot, plot_output_affin, plot_affs_divergent_colors, mask_the_mask
 
 fig, axes = get_figure(1,1,figsize=(8,8))
-plot_segm(axes, mask_the_mask(label_prop_segm, value_to_mask=1), background=raw, alpha_boundary=0.05, alpha_labels=0.5, z_slice=3)
-save_plot(fig, "./new_plots/", "{}.png".format(METHOD_NAME))
+plot_segm(axes, label_prop_segm, background=raw, alpha_boundary=0.05, alpha_labels=0.5, z_slice=0)
+save_plot(fig, "./new_plots_2/", "{}.png".format(METHOD_NAME))
 
 
 

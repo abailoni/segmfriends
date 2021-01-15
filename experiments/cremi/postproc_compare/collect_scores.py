@@ -26,6 +26,7 @@ REQUIRED_STRINGS = [
 ]
 
 EXCLUDE_STRINGS = [
+    "with_mask",
     "_mergedGlia",
     "multicut_kerLin",
     # "multicut_exact",
@@ -39,7 +40,7 @@ INCLUDE_STRINGS = [
 
 POSTFIX_FILE = ""
 
-LATEX_OUTPUT = False
+LATEX_OUTPUT = True
 
 sorting_column_idx = 0
 

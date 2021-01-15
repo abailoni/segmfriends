@@ -15,8 +15,9 @@ from GASP.segmentation.GASP.core import run_GASP
 dataset = os.path.join(get_trendytukan_drive_dir(), "datasets/CREMI/crop_mask_emb_predictions/crop_maskEmb_affs_cremi_val_sample_C.h5")
 
 METHOD_NAME = "diceAffs_GASP"
-label_pro_name = "dice_all_edges"
-sp_method = "WS"
+# label_pro_name = "dice_all_edges"
+label_pro_name = "dice_all_edges_forceLocal_double"
+sp_method = "LP"
 
 OUTLIER_THRESH = 0.5
 OUTLIER_WEIGHT = 0.5

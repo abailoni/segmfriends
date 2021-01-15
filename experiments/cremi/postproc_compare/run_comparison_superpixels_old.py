@@ -14,10 +14,11 @@ from GASP.segmentation.GASP.core import run_GASP
 
 dataset = os.path.join(get_trendytukan_drive_dir(), "datasets/CREMI/crop_mask_emb_predictions/crop_maskEmb_affs_cremi_val_sample_C.h5")
 
-save_scores = False
-METHOD_NAME = "debug_diceAffs_GASP"
+save_scores = True
+METHOD_NAME = "diceAffs_GASP_2"
 # label_pro_name = "dice_local_edges"
-label_pro_name = "dice_all_edges"
+# label_pro_name = "dice_all_edges"
+label_pro_name = "dice_all_edges_forceLocal"
 sp_method = "WSDT"
 
 
@@ -26,8 +27,8 @@ import matplotlib.pyplot as plt
 from segmfriends.vis import plot_segm, get_figure, save_plot, plot_output_affin, plot_affs_divergent_colors, mask_the_mask
 
 
-crop_slice = parse_data_slice("10:11,:100,:100")
-# crop_slice = parse_data_slice(":")
+# crop_slice = parse_data_slice("10:15,:200,:200")
+crop_slice = parse_data_slice(":")
 print(get_hdf5_inner_paths(dataset))
 
 inner_path = "affinities_mask_average" if "maskAffs" in METHOD_NAME else "affinities_dice"
@@ -93,11 +94,11 @@ offsets_prob[3:] = 1.
 #
 # # print("Done")
 # #
-graph, is_local_edge, edge_sizes = build_pixel_long_range_grid_graph_from_offsets(
-    image_shape=cremi_affs.shape[1:],
-    offsets=offsets,
-    offsets_probabilities=offsets_prob
-)
+# graph, is_local_edge, edge_sizes = build_pixel_long_range_grid_graph_from_offsets(
+#     image_shape=cremi_affs.shape[1:],
+#     offsets=offsets,
+#     offsets_probabilities=offsets_prob
+# )
 #
 # edge_weights =graph.edgeValues(np.rollaxis(cremi_affs, 0, start=4))
 #
@@ -121,7 +122,7 @@ seeded_WS = SeededWatershedOnAffinities(offsets, hmap_kwargs={'used_offsets': [1
 normal_WS_gen = WatershedFromAffinities(offsets,
                                         used_offsets=[1,2],
                                         stacked_2d=True,
-                                        n_threads=6,
+                                        n_threads=8,
                                         )
 DTWS_gen = WatershedOnDistanceTransformFromAffinities(offsets,
                                                             used_offsets=[1,2],
@@ -130,10 +131,11 @@ DTWS_gen = WatershedOnDistanceTransformFromAffinities(offsets,
                                                             preserve_membrane=True,
                                                             sigma_seeds=0.1,
                                                             stacked_2d=True,
-                                                            n_threads=6,
+                                                            n_threads=8,
                                                             )
 
 
+import time
 SP_generator = None
 SP_segm = None
 if sp_method == "LP":
@@ -141,19 +143,16 @@ if sp_method == "LP":
     SP_segm = label_prop_segm
 elif sp_method == "WSDT":
     SP_generator = DTWS_gen
+    tick = time.time()
     SP_segm = DTWS_gen(cremi_affs.astype('float32'))
+    tock = time.time()
+    print("TIme WSDT: {}".format(tock-tick))
 elif sp_method == "WS":
+    tick = time.time()
     SP_generator = normal_WS_gen
     SP_segm = normal_WS_gen(cremi_affs.astype('float32'))
-
-from affogato.affinities import compute_affinities
-active_edges, valid_mask = compute_affinities(SP_segm.astype('uint64'), offsets, False, 0)
-
-MC_energy = (cremi_affs[:][np.logical_and(active_edges==0, valid_mask==1)] - 0.5).sum()
-print("MC energy SP segm: ", MC_energy)
-
-
-
+    tock = time.time()
+    print("TIme WS: {}".format(tock-tick))
 
 
 
@@ -178,7 +177,7 @@ runtime_total = time.time() - tick
 
 from GASP.segmentation.watershed import SizeThreshAndGrowWithWS
 size_thresh_ws = SizeThreshAndGrowWithWS(200, offsets, hmap_kwargs={'used_offsets': [1,2]})
-GASP_segmentation = size_thresh_ws(cremi_affs.astype('float32'), GASP_segmentation)
+# GASP_segmentation = size_thresh_ws(cremi_affs.astype('float32'), GASP_segmentation)
 
 score = cremi_score(GT, GASP_segmentation, return_all_scores=True)
 score['runtime'] = runtime_total
@@ -193,10 +192,20 @@ else:
 
 print("{}: ".format(full_name), score)
 fig, axes = get_figure(1,1,figsize=(8,8))
-plot_segm(axes, SP_segm, background=raw, alpha_boundary=0.0, alpha_labels=0.5)
+plot_segm(axes, GASP_segmentation, background=raw, alpha_boundary=0.5, alpha_labels=0.5)
 save_plot(fig, "./new_plots/", "{}.png".format(full_name))
 
+
+fig, axes = get_figure(1,1,figsize=(8,8))
+plot_segm(axes, SP_segm, background=raw, alpha_boundary=0.5, alpha_labels=0.5)
+save_plot(fig, "./new_plots/", "{}_SPsegm.png".format(full_name))
+
+
+
 if save_scores:
+    from segmfriends.utils.various import writeHDF5
+    writeHDF5(GASP_segmentation, "./final_segms/{}.h5".format(full_name), "segm")
+    writeHDF5(SP_segm, "./final_segms/{}.h5".format(full_name), "segm_SP")
     config_file_path = "./scores/{}.yml".format(full_name)
 
     with open(config_file_path, 'w') as f:

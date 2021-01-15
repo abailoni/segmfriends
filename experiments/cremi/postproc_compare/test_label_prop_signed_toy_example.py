@@ -10,8 +10,8 @@ from GASP.segmentation.GASP.run_from_affinities import GaspFromAffinities
 from GASP.segmentation.GASP.core import run_GASP
 
 
-METHOD_NAME = "test_label_prop"
-LP_method = "avg"
+METHOD_NAME = "closed_box_schulz_allEdges"
+LP_method = "sum"
 
 dataset = os.path.join(get_trendytukan_drive_dir(), "datasets/CREMI/crop_mask_emb_predictions/crop_maskEmb_affs_cremi_val_sample_C.h5")
 
@@ -23,43 +23,39 @@ print(get_hdf5_inner_paths(dataset))
 GT = readHDF5(dataset, "GT", crop_slice=crop_slice)
 raw = readHDF5(dataset, "raw", crop_slice=crop_slice)
 
-
 offsets = [
-    [0, 1, 0],
-    [0, 0, 1],
+      [-1, 0, 0],
+      [0, -1, 0],
+      [0, 0, -1],
+      [0, -4, 0],
+      [0, 0, -4],
+      [0, -4, -4],
+      [0, 4, -4],
+      [-1, -4, 0],
+      [-1, 0, -4],
+      [-1, -4, -4],
+      [-1, 4, -4],
+      [-2, 0, 0],
+      [-3, 0, 0],
+      [-4, 0, 0],
+      [0, -8, -8],
+      [0, 8, -8],
+      [0, -12, 0],
+      [0, 0, -12]
 ]
 
-affinities_y = np.array([[
-    [1,1,1,1,1],
-    [1,0,1,0,1],
-    [1,0,1,0,1],
-    [1,0,1,0,1],
-    [1,1,1,1,1],
-]])
+GT_segm = np.ones((1,45,45), dtype='uint64')
+GT_segm[:,18:27,18:27] = 2
 
-affinities_x = np.array([[
-    [1,1,1,1,1],
-    [1,0,0,0,1],
-    [1,1,1,1,1],
-    [1,0,0,0,1],
-    [1,1,1,1,1],
-]])
+from affogato.affinities import compute_affinities
+
+cremi_affs = compute_affinities(GT_segm, offsets, False, 0)[0]
 
 # cremi_affs = np.stack([affinities_x, affinities_y]).astype('float32')
 
-cremi_affs = np.ones((2,1,25,25), dtype='float32')
-
-# Add x-boundary:
-cremi_affs[0,:,7,7:14] = 0
-cremi_affs[0,:,13,7:14] = 0
-
-# Add y-boundary:
-cremi_affs[1,:,7:14,7] = 0
-cremi_affs[1,:,7:14,13] = 0
-# cremi_affs[:] = 1
 
 # Add some random noise:
-cremi_affs += np.random.normal(0,0.01,size=cremi_affs.shape)
+# cremi_affs += np.random.normal(0,0.01,size=cremi_affs.shape)
 # cremi_affs = np.clip(cremi_affs, 0, 1)
 
 
@@ -88,7 +84,8 @@ print("test")
 
 # Reduce number of long-range edges:
 offsets_prob = np.ones((len(offsets)), dtype='float32')
-# offsets_prob[3:] = 1.
+if "onlyLocal" in METHOD_NAME:
+    offsets_prob[3:] = 0.
 
 # print("Done")
 #
@@ -205,31 +202,31 @@ def get_avg_prio(acc_value, acc_size):
 def get_sum_prio(acc_value, acc_size):
     return acc_value
 
-# def compute_stacked_sp(z):
-#     print(z)
-#     edge_weights = graph.edgeValues(np.rollaxis(cremi_affs[:,[z]], 0, start=4))
-#     signed_edge_weights = edge_weights - 0.5
-#
-#     result = run_label_prop(graph, signed_edge_weights, nb_iter=20)
-#
-#     # Convert graph:
-#     print("Converting graph...")
-#     convert_graph_to_metis_format(graph, signed_edge_weights, graph_path)
-#
-#     print("Running label prop...")
-#     process = subprocess.Popen(run_label_prop_command, shell=True, stdout=subprocess.PIPE)
-#     process.wait()
-#     stdout = process.communicate()[0]
-#     print(stdout)
-#
-#     print("Saving...")
-#     segm_result_nodes = np.genfromtxt(out_segm_path, delimiter=',')
-#     label_prop_segm = segm_result_nodes.reshape(shape_2D).astype("uint32")
-#     max_label = label_prop_segm.max()
-#
-#     return label_prop_segm, max_label
+def compute_stacked_sp(z):
+    print(z)
+    edge_weights = graph.edgeValues(np.rollaxis(cremi_affs[:,[z]], 0, start=4))
+    signed_edge_weights = edge_weights - 0.5
+
+    # Convert graph:
+    print("Converting graph...")
+    convert_graph_to_metis_format(graph, signed_edge_weights, graph_path)
+
+    print("Running label prop...")
+    process = subprocess.Popen(run_label_prop_command, shell=True, stdout=subprocess.PIPE)
+    process.wait()
+    stdout = process.communicate()[0]
+    print(stdout)
+
+    print("Saving...")
+    segm_result_nodes = np.genfromtxt(out_segm_path, delimiter=',')
+    label_prop_segm = segm_result_nodes.reshape(shape_2D).astype("uint32")
+    max_label = label_prop_segm.max()
+
+    return label_prop_segm, max_label
 
 def lp_python(z, method='sum'):
+    if "schulz" in METHOD_NAME:
+        return compute_stacked_sp(z)
     edge_weights = graph.edgeValues(np.rollaxis(cremi_affs[:,[z]], 0, start=4))
     signed_edge_weights = edge_weights - 0.5
 
@@ -240,7 +237,11 @@ def lp_python(z, method='sum'):
     else:
         raise ValueError
 
-    segm_result_nodes = run_label_prop(graph, signed_edge_weights, get_prio, nb_iter=100)
+    if "forceLocal" in METHOD_NAME:
+        local_edges = is_local_edge
+    else:
+        local_edges = None
+    segm_result_nodes = run_label_prop(graph, signed_edge_weights, get_prio, nb_iter=100, local_edges=local_edges)
 
     label_prop_segm = segm_result_nodes.reshape(shape_2D).astype("uint32")
     max_label = label_prop_segm.max()
@@ -265,14 +266,19 @@ for z in range(cremi_affs.shape[1]):
 
 from vigra.analysis import labelVolume, relabelConsecutive
 
-segm_relabelled = labelVolume(label_prop_segm.astype('uint32'))
+segm_relabelled = label_prop_segm
+# segm_relabelled = labelVolume(label_prop_segm.astype('uint32'))
 segm_relabelled = relabelConsecutive(segm_relabelled)[0]
 intersect_segm = cantor_pairing_fct(connected_components, segm_relabelled)
 intersect_segm = relabelConsecutive(intersect_segm)[0]
 
 has_mistake = not np.allclose(intersect_segm, segm_relabelled)
 if has_mistake:
-    raise ValueError
+    print("HAS MISTAKE")
+
+segm_masked = np.zeros_like(segm_relabelled)
+for label in np.unique(segm_relabelled[GT_segm==2]):
+    segm_masked[segm_relabelled==label] = label
 
 # print("Done")
 # writeHDF5(label_prop_segm, "./{}.h5".format(METHOD_NAME), "segm")
@@ -280,10 +286,16 @@ if has_mistake:
 import matplotlib.pyplot as plt
 from segmfriends.vis import plot_segm, get_figure, save_plot, plot_output_affin, plot_affs_divergent_colors, mask_the_mask
 
-fig, axes = get_figure(1,1,figsize=(8,8))
+fig, axes = get_figure(3,1,figsize=(24,8))
 # axes.matshow(mask_the_mask(cremi_affs[0,0], value_to_mask=1), cmap='gray', alpha=0.9, interpolation='None')
 # axes.matshow(mask_the_mask(cremi_affs[1,0], value_to_mask=1), cmap='gray', alpha=0.9, interpolation='None')
-plot_segm(axes, label_prop_segm, alpha_boundary=0.0, alpha_labels=0.9, z_slice=0)
+plot_segm(axes[0], segm_relabelled, alpha_boundary=0.0, alpha_labels=0.9, z_slice=0)
+plot_segm(axes[2], mask_the_mask(segm_masked, value_to_mask=0), alpha_boundary=0.0, alpha_labels=0.9, z_slice=0)
+plot_segm(axes[1], GT_segm, alpha_boundary=0.0, alpha_labels=0.9, z_slice=0)
+import matplotlib.patches as patches
+rect = patches.Rectangle((17.5,17.5),9,9,linewidth=1,edgecolor='black',facecolor='none')
+# Add the patch to the Axes
+axes[0].add_patch(rect)
 # axes.matshow(mask_the_mask(cremi_affs.min(axis=0)[0], value_to_mask=1), cmap='gray', alpha=0.6, interpolation='None')
 # plot_segm(axes, segm, alpha_boundary=0.0, alpha_labels=0.9, z_slice=0)
 save_plot(fig, "./new_plots_2/", "{}.png".format(METHOD_NAME))

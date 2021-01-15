@@ -156,6 +156,9 @@ save_plot(fig, "./new_plots/", "{}.png".format(METHOD_NAME))
 
 config_file_path = "./scores/{}.yml".format(METHOD_NAME)
 
+from segmfriends.utils.various import writeHDF5
+writeHDF5(GASP_segmentation, "./final_segms/{}.h5".format(METHOD_NAME), "segm")
+
 with open(config_file_path, 'w') as f:
     yaml.dump(score, f)
 

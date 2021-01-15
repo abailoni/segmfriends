@@ -35,6 +35,12 @@ def get_bound_mask(segm):
                                                   np.array([[0,1,0], [0,0,1]]),
                                                   compress_channels=True)
 
+def get_bound_mask_alongZ(segm):
+    # print("B mask is expensive...")
+    return compute_boundary_mask_from_label_image(segm,
+                                                  np.array([[1,0,0]]),
+                                                  compress_channels=True)
+
 def get_masked_boundary_mask(segm):
     #     bound = np.logical_or(get_boundary_mask(segm)[0, 0],get_boundary_mask(segm)[1, 0])
     bound = get_bound_mask(segm)
@@ -69,6 +75,11 @@ def find_splits_merges(target, GT_labels, segm, z_slice=0, background=None):
     target.matshow(mask_the_mask(diff_bound == 3)[z_slice], cmap='autumn', alpha=1,
                 interpolation=DEF_INTERP)
 
+
+def find_splits_merges_numpy(GT_labels, segm):
+    GT_bound = get_bound_mask_alongZ(GT_labels) * 3.
+    segm_bound = get_bound_mask_alongZ(segm) * (1.)
+    return (GT_bound+segm_bound).astype(np.int32)
 
 
 
