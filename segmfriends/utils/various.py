@@ -202,13 +202,15 @@ def get_hdf5_inner_paths(path, inner_path=None):
 
 
 
-def cremi_score(gt, seg, return_all_scores=False, border_threshold=None):
+def cremi_score(gt, seg, return_all_scores=False, border_threshold=None,
+                run_connected_components=True):
     if cremi is None:
         raise ImportError("The cremi package is necessary to run cremi_score()")
 
     # # the zeros must be kept in the gt since they are the ignore label
-    gt = vigra.analysis.labelVolumeWithBackground(gt.astype(np.uint32))
-    # seg = vigra.analysis.labelVolume(seg.astype(np.uint32))
+    if run_connected_components:
+        gt = vigra.analysis.labelVolumeWithBackground(gt.astype(np.uint32))
+        seg = vigra.analysis.labelVolume(seg.astype(np.uint32))
 
     seg = np.array(seg)
     seg = np.require(seg, requirements=['C'])
