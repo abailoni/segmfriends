@@ -4,7 +4,7 @@ from Cython.Build import cythonize
 import numpy
 
 
-__version__ = '0.1.1'
+exec(open('segmfriends/__version__.py').read())
 
 
 extensions = [

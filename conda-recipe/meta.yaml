@@ -1,0 +1,30 @@
+package:
+  name: segmfriends
+  version: {{ GIT_DESCRIBE_TAG }}
+
+source:
+  path: ..
+
+build:
+  script: "pip install . --no-deps --ignore-installed --no-cache-dir -vvv"
+  number: 1
+
+requirements:
+  build:
+    - python
+    - pip
+    - cython
+
+  run:
+    - python
+    - gasp
+
+test:
+  requires:
+    - pytest
+  run:
+    - pytest tests/
+
+about:
+  home: https://github.com/abailoni/segmfriends
+  license: MIT
