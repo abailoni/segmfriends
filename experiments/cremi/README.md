@@ -1,4 +1,6 @@
 # Experiments on CREMI dataset
+TODO: remove pathutils dependence
+
 To run a `speedrun` experiment and train affinities, run the following command from the main folder of the package:
 
 `CUDA_VISIBLE_DEVICES=1 ipython experiments/cremi/train_affinities.py -- name_experiment --inherit example_train_affs.yml`
