@@ -9,10 +9,11 @@ trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
 CONDA_BASE=$(conda info --base)
 source $CONDA_BASE/etc/profile.d/conda.sh
 
-#TODO: uncomment,
-#conda create -n segmFr -c abailoni -c conda-forge gasp cython firelight
-conda activate segmFr
-#conda install --only-deps -c pytorch -c conda-forge inferno
+# TODO: uncomment, create req.yaml?
+# Only install the dependencies (we will install inferno from the latest github repo):
+conda create -n segmFriends --only-deps -c pytorch -c abailoni -c conda-forge gasp cython firelight inferno ipython jupyter
+conda activate segmFriends
+conda install -c abailoni -c conda-forge gasp cython firelight ipython jupyter
 
 # Install extra repositories:
 if [ ! -d "./downloads" ]; then mkdir ./downloads; fi
@@ -36,7 +37,7 @@ cd ..
 
 git clone https://github.com/abailoni/neurofire.git
 cd ./neurofire
-python setup.py install
+python setup.py develop
 cd ..
 
 git clone https://github.com/imagirom/ConfNets.git

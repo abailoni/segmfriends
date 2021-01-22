@@ -3,24 +3,24 @@ Bunch of tools and experiments for image segmentation
 
 
 ## Install
-### Basic version
-This version can run most of the clustering/segmentation algorithms included:
+### Basic version from conda
+This version can run all the clustering/segmentation algorithms included the package:
 
-- `conda create -n segmFr -c abailoni -c conda-forge nifty vigra cython`
-- `source activate segmFr`
-- `conda install -c abailoni GASP` (or install directly from [here](https://github.com/abailoni/GASP))
-- `conda install -c cpape affogato`
+- Clone the repository: `git clone https://github.com/abailoni/segmfriends.git`
+- `cd ./segmfriends`
+- To install the package, you will need [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) or [miniconda](https://docs.conda.io/en/latest/miniconda.html)
+- Once you have it, run `conda create -n segmFr -c abailoni -c conda-forge gasp`
+- Activate your new environment with `conda activate segmFr`
 - `python setup.py install` (or `python setup.py develop` if you plan to work on the package)
 
-### Full version
-For running all deep-learning experiments, at the moment the following dependencies are required:
-- `conda create -n segmFr -c abailoni -c conda-forge -c pytorch nifty vigra cython inferno`
-    - See `inferno` package here: https://github.com/inferno-pytorch/inferno
-- `firelight`: https://github.com/inferno-pytorch/firelight
-- `speedrun`: https://github.com/inferno-pytorch/speedrun/tree/new_import (branch `new_import`)
-- `neurofire`: https://github.com/abailoni/neurofire
-- `ConfNets`: https://github.com/imagirom/ConfNets/tree/multi-scale-unet - (branch `multi-scale-unet`)
-- `affogato`: https://github.com/constantinpape/affogato/tree/affinities-with-glia (branch `affinities-with-glia`)
-- (for evaluation scores, install module `cremi`: https://github.com/constantinpape/cremi_python/tree/py3)
+### Full version 
+If you plan to work on the package or run the deep-learning tools in it, you will need to install some extra packages (including [inferno](https://github.com/abailoni/inferno), [speedrun](https://github.com/abailoni/speedrun), [neurofire](https://github.com/abailoni/neurofire), [ConfNets](https://github.com/imagirom/ConfNets/tree/multi-scale-unet), ...):
 
-Coming soon: `segmfriend` conda-package
+- Clone the repository: `git clone https://github.com/abailoni/segmfriends.git`
+- `cd ./segmfriends`
+- `chmod +x ./install_full_dependencies.sh`
+- To install the dependencies, you will need [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) or [miniconda](https://docs.conda.io/en/latest/miniconda.html)
+- Install the dependencies and the package by running `./install_full_dependencies.sh`. While the script is running, you will need to confirm twice.
+- The script will create a new conda environment called `segmFriends` including everything. You can activate your new environment with `conda activate segmFr`
+
+

@@ -14,10 +14,13 @@ requirements:
     - python
     - pip
     - cython
+    - numpy
 
   run:
     - python
     - gasp
+    - h5py
+    - matplotlib
 
 test:
   requires:
