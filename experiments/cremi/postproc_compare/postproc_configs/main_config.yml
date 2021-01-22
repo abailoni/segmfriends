@@ -1,0 +1,234 @@
+# Feel free to use the keys $CWD (current working directory), $DATA_HOME and $LOCAL_DRIVE defined at runtime for dynamic paths.
+
+# -----------------------------------
+#### MAIN EXPERIMENT FOLDER ####
+# This path defines the main directory where all the experiments
+#  you will run will be saved (including data like scores and segmentations)
+main_output_dir: None
+
+# Now let's define the name of the current experiment (a folder with this name will be created in main_output_dir,
+# if not existing already):
+experiment_name: my_first_postproc_experiment
+
+
+
+# -----------------------------------
+#### OFFSETS ####
+# Load the offsets from a .json file:
+offsets_file_name: "SOA_offsets.json"
+offsets_dir_path: '$CWD/experiments/cremi/postproc_compare/offsets'
+
+# (Alternatively, you can load them directly from the infer config of the model that trained your affinities)
+# offset_path_in_infer_config: "model.config.offsets"
+
+
+
+# -----------------------------------
+# REMOVE THIS....?
+postproc_presets_path: '$CWD/experiments/cremi/postproc_compare/postproc_configs/postproc_presets.yml'
+
+
+# -----------------------------------
+#### AFFINITY PATH ####
+# -----------------------------------
+# There are several ways to specify the path of your affinities.
+
+# 1) You can specify the path manually:
+affinities:
+  inner_path: 'data'
+  dtype: float32
+  # In case, comment out the following lines and look at the next options:
+  path:
+    A: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleA_train.h5"
+    B: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
+    C: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
+
+# 2) If the previous `path` option is not given, the script can get the affinities from
+#    a sub-directory of `main_output_dir`:
+get_affinities_from_experiment_named: name_subfolder # Where to get affinities from
+# The script will look for files named `predictions_sample_{}.h5`
+
+# 3) If this is also not given, then the script will try to get them from the folder `main_output_dir/experiment_name`
+# and looks for files named `predictions_sample_{}.h5`.
+
+
+# -----------------------------------
+#### GROUND TRUTH PATH ####
+# -----------------------------------
+# For test samples, obviosly only the GT mask is loaded because there is no atual GT available
+  # (in this way the postprocessing can be limited to that GT mask)
+volume_config:
+  GT:
+    path:
+      A: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleA_train.h5"
+      B: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
+      C: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
+    inner_path:
+      A: "segmentations/groundtruth_fixed"
+      B: "segmentations/groundtruth_fixed_OLD"
+      C: "segmentations/groundtruth_fixed"
+    dtype: int32
+    ds_order: 1
+    #crop_slice: ":,:,:"
+
+  # These files will be necessary to re-align the predictions and submit them to the CREMI website:
+  paths_padded_boxes:
+    A+: '$HCI_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleA+_cropped_no_crop.csv'
+    B+: '$HCI_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleB+_cropped_no_crop.csv'
+    C+: '$HCI_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleC+_cropped_no_crop.csv'
+
+
+
+
+postproc_config:
+  # ------------------------------
+  # Generic options
+  # ------------------------------
+  compute_scores: True
+  restrict_to_GT_bbox: False
+  prepare_submission: False
+
+  from_superpixels: True
+  use_multicut: False # Deprecate...?
+
+  save_segm: True
+  WS_growing: True
+  connected_components_on_final_segm: False
+
+  save_name_postfix: "directAffs"
+
+  overwrite_prev_files: True
+  extra_presets:
+    - "simple_WSDT"
+#    - "gen_HC_DTWS"
+
+  save_UCM: False
+
+  # Specific for ISBI:
+  return_2D_segmentation: False
+  save_submission_tiff: False
+
+
+  # ------------------------------
+  # Iterated options (from each combination of the below, a segm is generated):
+  # ------------------------------
+  nb_threads: 4
+  nb_thread_pools: 3
+  nb_iterations: 1
+
+
+  iterated_options:
+    preset: ["MEAN"]
+#    sample: ["B", "C", "A"]
+    sample: ["C", "0", "1", "2"]
+#    sample: ["0"]
+    edge_prob: 0.
+    noise_factor: 0.
+    local_attraction: False
+
+    crop_slice: ":,:,:,:"
+#      '0': ":,:,:,:"
+#      '1': ":,:,:,:"
+#      '2': ":,:,:,:"
+#      C: ":,:,:,:"
+
+    sub_crop_slice: ":,:,:,:"
+
+
+
+  # ------------------------------
+  # Specific options (use presets to make mods easier)
+  # ------------------------------
+  segm_pipeline_type: 'gen_HC'
+  invert_affinities: False
+  blockwise: False
+  #return_fragments: False
+  use_final_agglomerater: False
+  stacking_2D: False
+  thresh_segm_size: 200
+
+  blockwise_kwargs:
+    crop_padding: True
+    nb_parallel_blocks: 20
+    num_workers: 1
+
+  MWS_kwargs:
+    randomize_bounds: True
+    stride:
+      - 1
+      - 6
+      - 6
+
+  start_from_given_segm: False
+
+  use_fragmenter: False
+  fragmenter: 'WSDT'
+
+  WSDT_kwargs:
+    threshold: 0.5
+    from_boundary_maps: true
+    min_segment_size: 20 # THIS SHOULD NOT BE PUT TO ZERO...!
+    preserve_membrane: True
+    sigma_seeds: 0.1
+    stacked_2d: True
+    intersect_with_boundary_pixels: True
+    boundary_pixels_kwargs:
+      boundary_threshold: 0.5
+      used_offsets: [0, 1, 2, 4, 5, 7, 8]
+      offset_weights: [1., 1., 1., 1., 1., 0.9, 0.9]
+
+
+  prob_map_kwargs:
+      offset_weights: [1.0, 1.0]
+      used_offsets: [1, 2]
+
+
+  multicut_kwargs:
+    weighting_scheme: 'all' # "all", "z", "xyz", None
+    solver_type: 'multicutIlpCplex' # fusionMoves, kernighanLin, multicutIlpCplex, ccFusionMoveBased
+  #  time_limit: 120
+    weight: 16.
+    verbose_visitNth: 100
+    offsets_probabilities: 1.0
+
+  use_lifted_edges: True
+  combine_SP_and_pixels: True
+
+  generalized_HC_kwargs:
+    agglomeration_kwargs:
+      offsets_probabilities: 1.0 # Probs. for long-range edges
+      return_UCM: False
+#      used_offsets: [0,1,2,3,4,5,6,14,15,16,17]
+
+      debug: True
+      extra_aggl_kwargs:
+        size_regularizer: 0.
+        threshold: 0.5 # Merge all: 0.0; split all: 1.0
+      extra_runAggl_kwargs:
+        verbose: True
+        printNth: 1000000
+
+    final_agglomeration_kwargs:
+      zero_init: False
+      max_distance_lifted_edges: 1
+      update_rule_merge: 'mean'
+      update_rule_not_merge: 'mean'
+      offsets_weights: [1., 1., 1.,
+                        1., 1., 1., 1.,
+                        9., 9., 9., 9., 9., 9., 9., 9.,
+                        27., 27.]
+      extra_aggl_kwargs:
+        sizeRegularizer: 0.
+        sizeThreshMin: 0.
+        sizeThresMax: 120.
+        postponeThresholding: False
+        threshold: 0.5 # Merge all: 0.0; split all: 1.0
+      extra_runAggl_kwargs:
+        verbose: True
+        printNth: 500000
+
+
+
+
+
+

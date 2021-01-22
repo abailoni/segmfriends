@@ -1,0 +1,25 @@
+volume_config:
+  # These files will be necessary to re-align the predictions and submit them to the CREMI website:
+  paths_padded_boxes:
+    A+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleA+_cropped_no_crop.csv'
+    B+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleB+_cropped_no_crop.csv'
+    C+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleC+_cropped_no_crop.csv'
+
+  GT:
+    path:
+      A: '$DATA_HOME/datasets/new_cremi/sampleA.h5'
+      B: '$DATA_HOME/datasets/new_cremi/sampleB.h5'
+      C: '$DATA_HOME/datasets/new_cremi/sampleC.h5'
+      A+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleA+_cropped_no_crop.h5'
+      B+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleB+_cropped_no_crop.h5'
+      C+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleC+_cropped_no_crop.h5'
+    inner_path:
+      A: 'volumes/labels/neuron_ids_fixed_2x'
+      B: 'volumes/labels/neuron_ids_fixed_2x'
+      C: 'volumes/labels/neuron_ids_fixed_2x'
+      A+: 'volumes/labels/mask_raw_2x'
+      B+: 'volumes/labels/mask_raw_2x'
+      C+: 'volumes/labels/mask_raw_2x'
+    dtype: int32
+    ds_order: 1
+#    crop_slice: ":,:,:"
