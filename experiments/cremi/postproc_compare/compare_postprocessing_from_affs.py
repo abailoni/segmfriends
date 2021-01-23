@@ -112,8 +112,8 @@ class PostProcessingExperiment(BaseExperiment):
         sample = str(sample)
 
         # -----------------------------------
-        # FIXME: temporary fix
-
+        # Temporary fix to crop affinities if the tensor happens to have padding with invalid values (usually with
+        # value -1), for example because a portion of the dataset was not predicted by the model.
         def find_first_index(array, min, max):
             for idx, val in np.ndenumerate(array):
                 if val >= min and val <= max:
@@ -128,8 +128,6 @@ class PostProcessingExperiment(BaseExperiment):
         if mask_used_edges is not None:
             mask_used_edges = mask_used_edges[global_crop_slc]
         GT = GT[global_crop_slc[1:]]
-
-
         # -----------------------------------
 
         # ------------------------------
@@ -142,39 +140,43 @@ class PostProcessingExperiment(BaseExperiment):
         post_proc_config, presets_collected = self.apply_presets_to_postproc_config(init_presets=[preset],
                                                                  local_attraction=local_attraction)
 
-        # Make some fine adjustments to config:
-        post_proc_config['generalized_HC_kwargs']['agglomeration_kwargs']['offsets_probabilities'] = edge_prob
-        post_proc_config['generalized_HC_kwargs']['agglomeration_kwargs']['mask_used_edges'] = mask_used_edges
-        post_proc_config['generalized_HC_kwargs']['agglomeration_kwargs']['return_UCM'] = post_proc_config.get("save_UCM", False)
+        assert not post_proc_config.get("start_from_given_segmentation", False), "Starting from a given segmentation is not suppoerted with the current setup"
 
-        if post_proc_config.get("use_multicut", False):
+        # Make some adjustments to config:
+        if mask_used_edges is None:
+            post_proc_config['GASP_kwargs']['offsets_probabilities'] = edge_prob
             post_proc_config['multicut_kwargs']['offsets_probabilities'] = edge_prob
 
-        n_threads = post_proc_config.pop('nb_threads')
-        invert_affinities = post_proc_config.pop('invert_affinities', False)
-        segm_pipeline_type = post_proc_config.pop('segm_pipeline_type', 'gen_HC')
+
+        nb_threads = post_proc_config.get('nb_threads')
+        invert_affinities = post_proc_config.get('invert_affinities', False)
+        assert 'segm_pipeline_type' in post_proc_config, "Segmentation pipeline was not specified"
+        segm_pipeline_type = post_proc_config['segm_pipeline_type']
 
         # Build the segmentation pipeline:
         segmentation_pipeline = get_segmentation_pipeline(
-            segm_pipeline_type,
-            offsets,
-            nb_threads=n_threads,
-            invert_affinities=invert_affinities,
+            offsets=offsets,
             return_fragments=False,
             **post_proc_config
         )
 
         # ------------------------------
-        # Run post-processing:
+        # Run segmentation pipeline:
         # ------------------------------
+        run_kwargs = {}
+        # Pass mask of used edges if necessary:
+        if mask_used_edges is not None:
+            assert segm_pipeline_type == "GASP", "Only GASP supports mask of edges at the moment!"
+            run_kwargs = {"mask_used_edges": mask_used_edges}
+
+        run_args = []
+        if post_proc_config.get("restrict_to_GT_bbox", False):
+            assert post_proc_config.get("from_superpixels", False), "Restricting to GT box is only supported from superpixels at the moment."
+            run_args.append(GT != 0)
+
         print("Starting prediction...")
         tick = time.time()
-        # FIXME: from_superpixels to use_fragmenter
-        if post_proc_config.get("from_superpixels", False) and post_proc_config.get("restrict_to_GT_bbox", True):
-            print("Restricting to GT bbox")
-            outputs = segmentation_pipeline(affinities, GT != 0)
-        else:
-            outputs = segmentation_pipeline(affinities)
+        outputs = segmentation_pipeline(affinities, *run_args, **run_kwargs)
         comp_time = time.time() - tick
         print("Post-processing took {} s".format(comp_time))
 
@@ -183,13 +185,13 @@ class PostProcessingExperiment(BaseExperiment):
             pred_segm, out_dict = outputs
         else:
             pred_segm = outputs
-            out_dict = {'MC_energy': np.array([0]), 'runtime': 0.}
-        MC_energy = out_dict['MC_energy']
-        if post_proc_config.get("save_UCM", False):
-            raise DeprecationWarning
-            UCM, mergeTimes = out_dict['UCM'], out_dict['mergeTimes']
+            out_dict = {'multicut_energy': np.array([0]), 'runtime': 0.}
+        multicut_energy = out_dict['multicut_energy']
 
-        # Make 2D segmentation:
+        # ------------------------------
+        # Post-process the output segmentation:
+        # ------------------------------
+        # Convert to 2D segmentation, if necessary:
         if post_proc_config.get("return_2D_segmentation", False):
             segm_2D = np.empty_like(pred_segm)
             max_label = 0
@@ -198,15 +200,20 @@ class PostProcessingExperiment(BaseExperiment):
                 max_label += pred_segm[z].max() + 1
             pred_segm = vigra.analysis.labelVolume(segm_2D.astype('uint32'))
 
+        # Relabel consecutive:
         pred_segm = vigra.analysis.relabelConsecutive(pred_segm.astype('uint64'))[0]
 
-        # MWS in affogato could make problems, without connected components...
+        # Some algorithms could return clusters with multiple connected compoents in the image plane
+        # (e.g. MWS (efficient implementation) with long-range attractive connections), so we may want
+        # to run connected components:
         if post_proc_config.get("connected_components_on_final_segm", False):
+            # Vigra cannot handle numbers higher than uint32:
             if pred_segm.max() > np.uint32(-1):
                 raise ValueError("uint32 limit reached!")
             else:
                 pred_segm = vigra.analysis.labelVolumeWithBackground(pred_segm.astype('uint32'))
 
+        # If necessary, get rid of small segments with seeded watershed:
         grow_WS = post_proc_config.get('thresh_segm_size', 0) != 0 and post_proc_config.get("WS_growing", False)
         if grow_WS:
             grow = SizeThreshAndGrowWithWS(post_proc_config['thresh_segm_size'],
@@ -219,28 +226,28 @@ class PostProcessingExperiment(BaseExperiment):
 
 
 
-        # from segmfriends.transform.combine_segms_CY import find_segmentation_mistakes
-        #
-        #
-        # result = find_segmentation_mistakes(segm_to_analyze, gt_to_analyze, ARAND_thresh=0.4, ignore_label=0,
-        #                                     mode="undersegmentation")
-
+        # TODO: compute multicut_energy again in GASP
+        # TODO: is local and global crop really necessary...?
+        # TODO: multicut option mess
+        # TODO: presets mess
 
         # ------------------------------
         # SAVING RESULTS:
         # ------------------------------
+        strings_to_include_in_filenames = [sample, segm_pipeline_type] + presets_collected
         config_file_path, segm_file_path = \
-            self.get_valid_out_paths(sample, presets_collected,
-                                     overwrite_previous=post_proc_config.get("overwrite_prev_files", False))
+            self.get_valid_out_paths(strings_to_include_in_filenames,
+                                     overwrite_previous=post_proc_config.get("overwrite_prev_files", False),
+                                     filename_postfix=post_proc_config.get('filename_postfix', None)
+                                     )
 
         print(segm_file_path)
         config_to_save = deepcopy(self._config)
 
-        if mask_used_edges is not None:
-            post_proc_config['generalized_HC_kwargs']['agglomeration_kwargs'].pop('mask_used_edges')
         post_proc_config.pop("iterated_options")
         config_to_save['postproc_config'] = post_proc_config
 
+        # TODO: delete
         # Save configuration of the iterated kwargs:
         config_to_save["postproc_config"]["presets_collected"] = presets_collected
         config_to_save["postproc_config"]["sample"] = sample
@@ -269,13 +276,16 @@ class PostProcessingExperiment(BaseExperiment):
                 evals_WS = None
                 print("Scores achieved ({}): \n {}".format(presets_collected, evals))
             config_to_save.update(
-                {'energy': MC_energy.item(), 'score': evals, 'score_WS': evals_WS, 'runtime': out_dict['runtime']})
+                {'energy': multicut_energy.item(), 'score': evals, 'score_WS': evals_WS, 'runtime': out_dict['runtime']})
+
+        # TODO: save MC energy properly (no numpy shit)
+        # TODO: get rid of all the presets from the final saved config
 
         # ------------------------
         # FIXME: temp hack for memory debug
         out_dict.pop("agglomeration_data", None)
         out_dict.pop("edge_data_contracted_graph", None)
-        out_dict.pop("MC_energy", None)
+        out_dict.pop("multicut_energy", None)
         out_dict.pop("runtime", None)
         config_to_save.update(out_dict)
         # ------------------------
@@ -306,6 +316,7 @@ class PostProcessingExperiment(BaseExperiment):
                 io.imsave(segm_file_path.replace(".h5", ".tif"), binary_boundaries.astype('float32'))
 
             if post_proc_config.get("prepare_submission", False):
+                raise DeprecationWarning("Get it back from old repo")
                 from vaeAffs.postproc.utils import prepare_submission
                 # FIXME: generalize the ds factor and path to bbox
                 path_bbox_slice = self.get("volume_config/paths_padded_boxes", ensure_exists=True)
@@ -316,20 +327,40 @@ class PostProcessingExperiment(BaseExperiment):
 
         if post_proc_config.get("save_UCM", False):
             raise DeprecationWarning()
+            UCM, mergeTimes = out_dict['UCM'], out_dict['mergeTimes']
 
-    def get_valid_out_paths(self, sample, presets_collected,
+        # from segmfriends.transform.combine_segms_CY import find_segmentation_mistakes
+        # result = find_segmentation_mistakes(segm_to_analyze, gt_to_analyze, ARAND_thresh=0.4, ignore_label=0,
+        #                                     mode="undersegmentation")
+
+
+    def get_valid_out_paths(self, strings_to_include_in_filenames,
                             sub_dirs=('scores', 'out_segms'),
                             file_extensions=('.yml', '.h5'),
+                            filename_postfix=None,
                             overwrite_previous=False):
+        """
+        This function takes care of creating a valid names for the output config/score and segmentation files.
+
+        By default only two paths are generated:
+           - one for the score/config file, that will be stored in the 'scores' subfolder and with the `.yml` extension
+           - one for the output segmentations, stored in the `out_segms` subfolder with the `.h5` extension.
+
+        Sometimes, we want to run the same setup/agglomeration multiple times (when there is randomness or noise involved
+        for example, so we collect statistics afterward). In this case, set overwrite_previous to False and each output
+        file name will contain a randomly assigned ID between 0 and 1000000000.
+
+        In order to make the names of the saved files more readable, the name will include all the strings included in
+        the parameter `strings_to_include_in_filenames`
+        """
         experiment_dir = self.get("exp_path")
 
         # Compose output file name:
-        filename = sample
-        for preset in presets_collected:
-            filename += "__{}".format(preset)
-        post_fix = self.get('postproc_config/save_name_postfix', None)
-        if post_fix is not None:
-            filename = filename + "__" + post_fix
+        filename = ""
+        for string in strings_to_include_in_filenames:
+            filename += "__{}".format(string)
+        if filename_postfix is not None:
+            filename = filename + "__" + filename_postfix
 
         ID = str(np.random.randint(1000000000))
         out_file_paths = []
@@ -338,12 +369,10 @@ class PostProcessingExperiment(BaseExperiment):
             dir_path = os.path.join(experiment_dir, dir_type)
             segm_utils.check_dir_and_create(dir_path)
 
-            # Backup old file, it already exists:
             candidate_file = os.path.join(dir_path, filename + file_ext)
-            if os.path.exists(candidate_file) and not overwrite_previous:
+            # If necessary, add random ID to filename:
+            if not overwrite_previous:
                 candidate_file = candidate_file.replace(file_ext, "__{}{}".format(ID, file_ext))
-                # Renaming previous file is not thread safe...
-                # shutil.move(candidate_file, candidate_file.replace(file_ext, "__{}{}".format(ID, file_ext)))
             out_file_paths.append(candidate_file)
 
         return out_file_paths
