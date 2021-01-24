@@ -1,3 +1,4 @@
+from GASP.utils.various import find_indices_direct_neighbors_in_offsets
 from segmfriends.utils.paths import get_vars_from_argv, change_paths_config_file
 
 from speedrun import BaseExperiment
@@ -43,7 +44,7 @@ class PostProcessingExperiment(BaseExperiment):
         self.set("main_output_dir", main_output_dir)
 
         # Load the file with all the presets of postprocessing:
-        postproc_presets_path = self.get('postproc_presets_path', ensure_exists=True)
+        postproc_presets_path = self.get('postproc_config/postproc_presets_file_path', ensure_exists=True)
         self.set("postproc_presets", segm_utils.yaml2dict(postproc_presets_path))
 
         self.build_experiment()
@@ -52,7 +53,7 @@ class PostProcessingExperiment(BaseExperiment):
     def build_experiment(self):
         # Create dirs if not existing:
         exp_name = self.get("experiment_name", ensure_exists=True)
-        exp_path = os.path.join(self.get("main_output_dir"), exp_name)
+        exp_path = os.path.join(self.get("main_output_dir", ensure_exists=True), exp_name)
         self.set("exp_path", exp_path)
         exp_path_exists = segm_utils.check_dir_and_create(exp_path)
 
@@ -137,16 +138,19 @@ class PostProcessingExperiment(BaseExperiment):
 
         offsets = self.get("offsets")
 
-        post_proc_config, presets_collected = self.apply_presets_to_postproc_config(init_presets=[preset],
-                                                                 local_attraction=local_attraction)
+        # TODO: generalize so that we can pass a list of list of presets, and iterate all the combinations!
+        post_proc_config, presets_collected = self.apply_presets_to_postproc_config([preset])
 
         assert not post_proc_config.get("start_from_given_segmentation", False), "Starting from a given segmentation is not suppoerted with the current setup"
 
         # Make some adjustments to config:
+        post_proc_config['GASP_kwargs']['return_extra_outputs'] = True
         if mask_used_edges is None:
             post_proc_config['GASP_kwargs']['offsets_probabilities'] = edge_prob
             post_proc_config['multicut_kwargs']['offsets_probabilities'] = edge_prob
-
+        else:
+            post_proc_config['GASP_kwargs'].pop('offsets_probabilities', None)
+            post_proc_config['multicut_kwargs'].pop('offsets_probabilities', None)
 
         nb_threads = post_proc_config.get('nb_threads')
         invert_affinities = post_proc_config.get('invert_affinities', False)
@@ -226,10 +230,10 @@ class PostProcessingExperiment(BaseExperiment):
 
 
 
-        # TODO: compute multicut_energy again in GASP
-        # TODO: is local and global crop really necessary...?
-        # TODO: multicut option mess
-        # TODO: presets mess
+        # TODO: is local and global crop really necessary...? I should handle different samples properly......
+        #  That was the main deal of the subcrop I think (I could apply it independtly to each CREMI sample)
+        # TODO: separate presets files
+        # TODO: more iterable presets
 
         # ------------------------------
         # SAVING RESULTS:
@@ -243,11 +247,11 @@ class PostProcessingExperiment(BaseExperiment):
 
         print(segm_file_path)
         config_to_save = deepcopy(self._config)
+        config_to_save.pop("postproc_presets")
 
         post_proc_config.pop("iterated_options")
         config_to_save['postproc_config'] = post_proc_config
 
-        # TODO: delete
         # Save configuration of the iterated kwargs:
         config_to_save["postproc_config"]["presets_collected"] = presets_collected
         config_to_save["postproc_config"]["sample"] = sample
@@ -267,6 +271,8 @@ class PostProcessingExperiment(BaseExperiment):
         pred_segm = vigra.analysis.labelVolumeWithBackground(pred_segm.astype('uint32'))
 
         # Compute scores:
+        config_to_save.update({'multicut_energy': multicut_energy.item(), 'run_GASP_runtime': out_dict['runtime'],
+                               'full_GASP_pipeline_runtime': comp_time})
         if post_proc_config.get("compute_scores", False):
             evals = segm_utils.cremi_score(GT, pred_segm, border_threshold=None, return_all_scores=True)
             if grow_WS:
@@ -276,19 +282,10 @@ class PostProcessingExperiment(BaseExperiment):
                 evals_WS = None
                 print("Scores achieved ({}): \n {}".format(presets_collected, evals))
             config_to_save.update(
-                {'energy': multicut_energy.item(), 'score': evals, 'score_WS': evals_WS, 'runtime': out_dict['runtime']})
+                {'score': evals, 'score_WS': evals_WS})
 
         # TODO: save MC energy properly (no numpy shit)
         # TODO: get rid of all the presets from the final saved config
-
-        # ------------------------
-        # FIXME: temp hack for memory debug
-        out_dict.pop("agglomeration_data", None)
-        out_dict.pop("edge_data_contracted_graph", None)
-        out_dict.pop("multicut_energy", None)
-        out_dict.pop("runtime", None)
-        config_to_save.update(out_dict)
-        # ------------------------
 
         # Dump config:
         with open(config_file_path, 'w') as f:
@@ -357,8 +354,11 @@ class PostProcessingExperiment(BaseExperiment):
 
         # Compose output file name:
         filename = ""
-        for string in strings_to_include_in_filenames:
-            filename += "__{}".format(string)
+        for i, string in enumerate(strings_to_include_in_filenames):
+            if i == 0:
+                filename += "{}".format(string)
+            else:
+                filename += "__{}".format(string)
         if filename_postfix is not None:
             filename = filename + "__" + filename_postfix
 
@@ -458,9 +458,8 @@ class PostProcessingExperiment(BaseExperiment):
 
                         GT = segm_utils.readHDF5_from_volume_config(sample,
                                             crop_slice=gt_crop_slc,
-                                            run_connected_components=False
-                                            **GT_vol_config,
-                                            )
+                                            run_connected_components=False,
+                                            **GT_vol_config)
 
 
                         # Optionally, affinity paths are deduced dynamically:
@@ -475,9 +474,8 @@ class PostProcessingExperiment(BaseExperiment):
 
                         affinities = segm_utils.readHDF5_from_volume_config(sample,
                                             crop_slice=affs_crop_slc,
-                                            run_connected_components=False
-                                            **affs_vol_config,
-                                            )
+                                            run_connected_components=False,
+                                            **affs_vol_config)
 
                         assert GT.shape == affinities.shape[1:], "Loaded GT and affinities do not match: {} - {}".format(GT.shape, affinities.shape[1:])
                         sub_crop_slc = segm_utils.parse_data_slice(sub_crop)
@@ -507,6 +505,10 @@ class PostProcessingExperiment(BaseExperiment):
                                 if long_range_prob < 1.0 and long_range_prob > 0.0:
                                     collected_data["affs_mask"][sample][crop][sub_crop][long_range_prob] = np.random.random(
                                         affinities.shape) < long_range_prob
+                                    # Direct neighbors should be always added:
+                                    offsets = self.get("offsets")
+                                    is_offset_direct_neigh, _ = find_indices_direct_neighbors_in_offsets(offsets)
+                                    collected_data["affs_mask"][sample][crop][sub_crop][long_range_prob][is_offset_direct_neigh] = True
 
                 # ----------------------------------------------------------------------
                 # Create iterators:
@@ -539,17 +541,10 @@ class PostProcessingExperiment(BaseExperiment):
         return kwargs_collected
 
     def apply_presets_to_postproc_config(self,
-                            init_presets=None,
-                            local_attraction=False):
+                            list_of_presets_to_be_applied=None):
         # Get all presets:
         post_proc_config = deepcopy(self.get("postproc_config"))
-        presets_collected = [] if init_presets is None else init_presets
-        presets_collected = presets_collected if not local_attraction else presets_collected + ["impose_local_attraction"]
-        if post_proc_config.get("from_superpixels", False):
-            if post_proc_config.get("use_multicut", False):
-                presets_collected = ["use_fragmenter"]
-            else:
-                presets_collected += ["gen_HC_DTWS"]  # DTWS
+        presets_collected = [] if list_of_presets_to_be_applied is None else list_of_presets_to_be_applied
 
         if post_proc_config.get("extra_presets", False):
             presets_from_config = post_proc_config.get("extra_presets")
