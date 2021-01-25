@@ -1,0 +1,36 @@
+experiment_name: subcrop_train_samples
+
+postproc_config:
+#  TODO: superpixels, samples, crops, prob, subcrop
+  from_superpixels: False
+
+  iterated_options:
+    preset: [ "MEAN", "MEANconstr" ] # Presets to be found in the presets folder
+    # TODO: The following options modify things at loading time, so they need to be handled specifically:
+#    sample: [ "A"]
+#    sample: [ "B", "C", "A" ]
+    edge_prob: 0.1
+    noise_factor: 0.
+    crop_slice:
+      A:
+        - ":, 0: 31,:1300, -1300:"
+        - ":, 31: 62,:1300, -1300:"
+        - ":, 62: 93, 25: 1325,:1300"
+        - ":, 93: 124, -1300:,:1300"
+      B:
+        - ":, 0: 31, 50: 1350, 200: 1500"
+        - ":, 31: 62, 20: 1320, 400: 1700"
+        - ":, 62: 93, 90: 1390, 580: 1880"
+        - ":, 93: 124, -1300:, 740: 2040"
+      C:
+        - ":, 0: 31, -1300:,:1300"
+        - ":, 31: 62, 150: 1450, 95: 1395"
+        - ":, 62: 93, 70: 1370, 125: 1425"
+        - ":, 93: 124,:1300, -1300:"
+
+#    sub_crop_slice: ":,:, 200:300, 200:300"
+    sub_crop_slice: ":,2:, 100:1100, 100:1100"
+
+  WSDT_kwargs:
+    intersect_with_boundary_pixels: False
+

@@ -129,20 +129,31 @@ postproc_config:
   # configs files with those names defined in the presets folder) and three CREMI samples, in total we will get 9 runs.
 
   iterated_options:
-    preset: [ "MEAN" ] # Presets to be found in the presets folder
+    preset: ["MEAN", "MEANconstr"] # Presets to be found in the presets folder
     # TODO: The following options modify things at loading time, so they need to be handled specifically:
-    sample: [ "B", "C", "A" ]
-    edge_prob: 0.1
+#    sample: [ "B", "C", "A" ]
+    edge_prob: 1.
     noise_factor: 0.
 #  TODO: do something with this. WHy do I need both exactly...?
-    crop_slice: ":, 0:31, 200:300, 200:300"
-    #      '0': ":,:,:,:"
-    #      '1': ":,:,:,:"
-    #      '2': ":,:,:,:"
-    #      C: ":,:,:,:"
+    crop_slice:
+      A:
+        - ":, 0: 31,:1300, -1300:"
+        - ":, 31: 62,:1300, -1300:"
+        - ":, 62: 93, 25: 1325,:1300"
+        - ":, 93: 124, -1300:,:1300"
+      B:
+        - ":, 0: 31, 50: 1350, 200: 1500"
+        - ":, 31: 62, 20: 1320, 400: 1700"
+        - ":, 62: 93, 90: 1390, 580: 1880"
+        - ":, 93: 124, -1300:, 740: 2040"
+      C:
+        - ":, 0: 31, -1300:,:1300"
+        - ":, 31: 62, 150: 1450, 95: 1395"
+        - ":, 62: 93, 70: 1370, 125: 1425"
+        - ":, 93: 124,:1300, -1300:"
 
-#    sub_crop_slice: ":,:, 200:500, 200:500",
-    sub_crop_slice: ":,:,:,:"
+#    sub_crop_slice: ":,:, 200:500, 200:500"
+    sub_crop_slice: ":,2:, 100:1100, 100:1100"
 
   # How many segmentation pipelines to run at the same time:
   nb_thread_pools: 1
@@ -150,8 +161,6 @@ postproc_config:
   # We could want to run the same setup multiple times (for example to collect statistics about noise/randomness etc)
   nb_iterations: 1
 
-  # TODO: get rid
-  use_multicut: False # Deprecate...?
 
 
   # ------------------------------
@@ -171,7 +180,7 @@ postproc_config:
   # Sometimes, we want to run the same setup/agglomeration multiple times (when there is randomness or noise involved
   # for example, so we collect statistics afterward). In this case, set `overwrite_prev_files` to False and each output
   # file name will contain a randomly assigned ID between 0 and 1000000000:
-  overwrite_prev_files: True
+  overwrite_prev_files: False
 
   # In order to make the names of the saved files more readable, the name will include some things by default like the
   # segm_pipeline_type, the CREMI sample, and the selected presets.
@@ -193,7 +202,7 @@ postproc_config:
   # ------------------------------
   # SUPERPIXEL GENERATOR OPTIONS:
   # ------------------------------
-  from_superpixels: False
+  from_superpixels: True
   # The accepted options here are 'WSDT' and 'WS'
   superpixel_generator_type: 'WSDT'
 

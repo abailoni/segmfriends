@@ -1,3 +1,5 @@
+from segmfriends.utils import writeHDF5
+
 from GASP.utils.various import find_indices_direct_neighbors_in_offsets
 from segmfriends.utils.paths import get_vars_from_argv, change_paths_config_file
 
@@ -22,7 +24,7 @@ from GASP.segmentation.watershed import SizeThreshAndGrowWithWS
 import time
 import shutil
 
-from multiprocessing.pool import ThreadPool
+from multiprocessing.pool import ThreadPool, Pool
 from itertools import repeat
 from segmfriends.utils.various import starmap_with_kwargs
 
@@ -93,11 +95,15 @@ class PostProcessingExperiment(BaseExperiment):
 
     def run(self):
         # Load data for all the runs:
+        nb_thread_pools = self.get("postproc_config/nb_thread_pools")
+        print("Pools: ", nb_thread_pools)
         kwargs_iter = self.get_kwargs_for_each_run()
         print("Total number of runs: {}".format(len(kwargs_iter)))
 
+
+
         # Create Pool and run post-processing:
-        nb_thread_pools = self.get("postproc_config/nb_thread_pools")
+        # TODO: replace with pool, but we need to pass a function, not a method
         pool = ThreadPool(processes=nb_thread_pools)
         starmap_with_kwargs(pool, self.run_clustering, args_iter=repeat([]),
                             kwargs_iter=kwargs_iter)
@@ -234,6 +240,7 @@ class PostProcessingExperiment(BaseExperiment):
         #  That was the main deal of the subcrop I think (I could apply it independtly to each CREMI sample)
         # TODO: separate presets files
         # TODO: more iterable presets
+        # TODO: save sp segmentation?
 
         # ------------------------------
         # SAVING RESULTS:
@@ -284,9 +291,6 @@ class PostProcessingExperiment(BaseExperiment):
             config_to_save.update(
                 {'score': evals, 'score_WS': evals_WS})
 
-        # TODO: save MC energy properly (no numpy shit)
-        # TODO: get rid of all the presets from the final saved config
-
         # Dump config:
         with open(config_file_path, 'w') as f:
             # json.dump(config_to_save, f, indent=4, sort_keys=True)
@@ -297,10 +301,9 @@ class PostProcessingExperiment(BaseExperiment):
             print(segm_file_path)
             if grow_WS:
                 pred_segm_WS = np.pad(pred_segm_WS, pad_width=[(pad, pad) for pad in global_pad[1:]], mode="constant")
-
-                vigra.writeHDF5(pred_segm_WS.astype('uint32'), segm_file_path, 'segm_WS', compression='gzip')
+                writeHDF5(pred_segm_WS.astype('uint32'), segm_file_path, 'segm_WS', compression='gzip')
             pred_segm = np.pad(pred_segm, pad_width=[(pad, pad) for pad in global_pad[1:]], mode="constant")
-            vigra.writeHDF5(pred_segm.astype('uint32'), segm_file_path, 'segm', compression='gzip')
+            writeHDF5(pred_segm.astype('uint32'), segm_file_path, 'segm', compression='gzip')
 
             if post_proc_config.get("save_submission_tiff", False):
                 # Compute submission tiff file (boundary: 0, inner: 1)
