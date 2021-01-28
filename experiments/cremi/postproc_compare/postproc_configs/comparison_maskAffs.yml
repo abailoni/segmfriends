@@ -1,0 +1,23 @@
+experiment_name: maskAffs
+
+postproc_config:
+#  TODO: subcrop, presets
+  from_superpixels: False
+  nb_thread_pools: 1
+  nb_threads: 4
+
+  iterated_options:
+    preset: ["Mutex", "MEANconstr", "MEAN", "MAXconstr", "SUM", "SUMconstr"]
+    sample: ["C"]
+    edge_prob: 0.1
+    noise_factor: 0.
+    crop_slice:
+      C:
+        - ":16,:,:,:"
+
+#    sub_crop_slice: ":,:, 200:300, 200:300"
+    sub_crop_slice: ":,70:-6,25:-25,25:-25"
+
+  GASP_kwargs:
+    used_offsets: [0,1,2,3,4,5,6,12,13,14,15]
+

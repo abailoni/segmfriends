@@ -40,7 +40,7 @@ affinities:
   path:
     A: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleA_train.h5"
     B: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
-    C: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
+    C: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleC_train.h5"
 
 # 2) If the previous `path` option is not given, the script can get the affinities from
 # a sub-directory of `main_output_dir`:
@@ -62,7 +62,7 @@ volume_config:
     path:
       A: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleA_train.h5"
       B: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
-      C: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
+      C: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleC_train.h5"
     inner_path:
       A: "segmentations/groundtruth_fixed"
       B: "segmentations/groundtruth_fixed_OLD"
@@ -135,22 +135,22 @@ postproc_config:
     edge_prob: 1.
     noise_factor: 0.
 #  TODO: do something with this. WHy do I need both exactly...?
-    crop_slice:
-      A:
-        - ":, 0: 31,:1300, -1300:"
-        - ":, 31: 62,:1300, -1300:"
-        - ":, 62: 93, 25: 1325,:1300"
-        - ":, 93: 124, -1300:,:1300"
-      B:
-        - ":, 0: 31, 50: 1350, 200: 1500"
-        - ":, 31: 62, 20: 1320, 400: 1700"
-        - ":, 62: 93, 90: 1390, 580: 1880"
-        - ":, 93: 124, -1300:, 740: 2040"
-      C:
-        - ":, 0: 31, -1300:,:1300"
-        - ":, 31: 62, 150: 1450, 95: 1395"
-        - ":, 62: 93, 70: 1370, 125: 1425"
-        - ":, 93: 124,:1300, -1300:"
+#    crop_slice:
+#      A:
+#        - ":, 0: 31,:1300, -1300:"
+#        - ":, 31: 62,:1300, -1300:"
+#        - ":, 62: 93, 25: 1325,:1300"
+#        - ":, 93: 124, -1300:,:1300"
+#      B:
+#        - ":, 0: 31, 50: 1350, 200: 1500"
+#        - ":, 31: 62, 20: 1320, 400: 1700"
+#        - ":, 62: 93, 90: 1390, 580: 1880"
+#        - ":, 93: 124, -1300:, 740: 2040"
+#      C:
+#        - ":, 0: 31, -1300:,:1300"
+#        - ":, 31: 62, 150: 1450, 95: 1395"
+#        - ":, 62: 93, 70: 1370, 125: 1425"
+#        - ":, 93: 124,:1300, -1300:"
 
 #    sub_crop_slice: ":,:, 200:500, 200:500"
     sub_crop_slice: ":,2:, 100:1100, 100:1100"

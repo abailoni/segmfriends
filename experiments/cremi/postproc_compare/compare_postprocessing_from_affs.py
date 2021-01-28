@@ -2,6 +2,7 @@ from segmfriends.utils import writeHDF5
 
 from GASP.utils.various import find_indices_direct_neighbors_in_offsets
 from segmfriends.utils.paths import get_vars_from_argv, change_paths_config_file
+from segmfriends.utils.opensimplex_noise import add_opensimplex_noise_to_affs
 
 from speedrun import BaseExperiment
 
@@ -492,15 +493,14 @@ class PostProcessingExperiment(BaseExperiment):
                         for long_range_prob in iterated_options['edge_prob']:
                             for noise in iterated_options['noise_factor']:
                                 if noise != 0.:
-                                    raise DeprecationWarning("Opensimplex noise no longer in nifty")
-                                    # noise_mod = postproc_config.get("noise_mod", 'split-biased')
-                                    # collected_data["affs"][sample][crop][sub_crop][noise] = \
-                                    #     postproc_utils.add_opensimplex_noise_to_affs(
-                                    #     affinities, noise,
-                                    #     mod=noise_mod,
-                                    #     target_affs='all',
-                                    #     seed=noise_seed
-                                    #     )
+                                    noise_mod = postproc_config["noise_mod"]
+                                    collected_data["affs"][sample][crop][sub_crop][noise] = \
+                                        add_opensimplex_noise_to_affs(
+                                        affinities, noise,
+                                        mod=noise_mod,
+                                        target_affs='all',
+                                        seed=noise_seed
+                                        )
                                 else:
                                     collected_data["affs"][sample][crop][sub_crop][noise] = affinities
 

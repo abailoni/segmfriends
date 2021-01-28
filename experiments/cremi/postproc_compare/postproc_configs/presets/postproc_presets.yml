@@ -58,6 +58,23 @@ Mutex:
           use_efficient_implementations: False
 
 
+
+# ---------------------------------------
+WSDT:
+  postproc:
+    segm_pipeline_type: 'only_superpixel_generator'
+    from_superpixels: True
+    superpixel_generator_type: 'WSDT'
+
+
+# ---------------------------------------
+
+
+
+
+
+
+
 longRangeEdges:
   postproc:
     use_fragmenter: True
@@ -504,11 +521,7 @@ crop_padded_affs:
       C: ':, 6:20, 120:-120, 120:-120'
 
 
-DTWS:
-  postproc:
-    segm_pipeline_type: 'only_fragmenter'
-    use_fragmenter: True
-    fragmenter: 'WSDT'
+
 
 longRangeProbMap:
   postproc:

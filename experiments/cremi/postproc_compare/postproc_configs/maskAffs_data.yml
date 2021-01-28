@@ -1,10 +1,13 @@
-volume_config:
-  # These files will be necessary to re-align the predictions and submit them to the CREMI website:
-  paths_padded_boxes:
-    A+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleA+_cropped_no_crop.csv'
-    B+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleB+_cropped_no_crop.csv'
-    C+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleC+_cropped_no_crop.csv'
+offsets_file_name: "maskAffs_offsets.json"
 
+affinities:
+  inner_path: 'data'
+  dtype: float32
+  path:
+    C: "$LOCAL_DRIVE/projects/pixel_embeddings/v4_addSparseAffs_avgDirectVar/predictions_sample_C.h5"
+
+
+volume_config:
   GT:
     path:
       A: '$DATA_HOME/datasets/new_cremi/sampleA.h5'

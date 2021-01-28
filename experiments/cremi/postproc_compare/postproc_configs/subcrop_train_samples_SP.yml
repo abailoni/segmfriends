@@ -1,15 +1,17 @@
-experiment_name: subcrop_train_samples
+experiment_name: subcrop_train_samples_all_LR_edges
 
 postproc_config:
-#  TODO: superpixels, samples, crops, prob, subcrop
-  from_superpixels: False
+#  TODO: samples, crops, subcrop, preset
+  from_superpixels: True
+  nb_thread_pools: 1
+  nb_threads: 4
 
   iterated_options:
-    preset: [ "MEAN", "MEANconstr" ] # Presets to be found in the presets folder
+    preset: [ "MEAN", "MEANconstr"] # Presets to be found in the presets folder
     # TODO: The following options modify things at loading time, so they need to be handled specifically:
-#    sample: [ "A"]
-    sample: [ "B", "C", "A" ]
-    edge_prob: 0.1
+    sample: [ "C"]
+#    sample: [ "B", "C", "A" ]
+    edge_prob: 1.
     noise_factor: 0.
     crop_slice:
       A:
@@ -23,10 +25,10 @@ postproc_config:
         - ":, 62: 93, 90: 1390, 580: 1880"
         - ":, 93: 124, -1300:, 740: 2040"
       C:
-        - ":, 0: 31, -1300:,:1300"
+#        - ":, 0: 31, -1300:,:1300"
         - ":, 31: 62, 150: 1450, 95: 1395"
-        - ":, 62: 93, 70: 1370, 125: 1425"
-        - ":, 93: 124,:1300, -1300:"
+#        - ":, 62: 93, 70: 1370, 125: 1425"
+#        - ":, 93: 124,:1300, -1300:"
 
 #    sub_crop_slice: ":,:, 200:300, 200:300"
     sub_crop_slice: ":,2:, 100:1100, 100:1100"
