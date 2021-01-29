@@ -8,6 +8,7 @@ from segmfriends.utils.config_utils import assign_color_to_table_value, return_r
 import json
 import numpy as np
 from segmfriends.utils.various import yaml2dict
+from segmfriends.utils.config_utils import collect_score_configs
 # -----------------------
 # Script options:
 # -----------------------
@@ -35,12 +36,12 @@ EXCLUDE_STRINGS = [
 INCLUDE_STRINGS = [
 ]
 
-POSTFIX_FILE = "_MEAN_and_MWS"
+POSTFIX_FILE = "_MWS_and_MEAN"
 
 LATEX_OUTPUT = False
 
 # Index of the sorting column (ignoring the first columns given by exp-name and name of the score file
-sorting_column_idx = 3
+sorting_column_idx = 0
 
 INCLUDE_EXP_NAME = False
 INCLUDE_SCORE_FILENAME = False
@@ -53,9 +54,9 @@ INCLUDE_SCORE_FILENAME = False
 #   - type of the data (how to print it in the table
 #   - number of floating digits (optional)
 keys_to_collect = [
-    (['postproc_config', 'sample'], 'string'),
-    (['postproc_config', 'crop'], 'string'),
-    (['postproc_config', 'presets_collected'], 'string'),
+    # (['postproc_config', 'sample'], 'string'),
+    # (['postproc_config', 'crop'], 'string'),
+    # (['postproc_config', 'presets_collected'], 'string'),
     (['score_WS', 'cremi-score'], 'f', 3),
     (['score_WS', 'adapted-rand'], 'f', 3),
     (['score_WS', 'vi-merge'], 'f', 3),
@@ -73,6 +74,8 @@ keys_to_collect = [
 #     "min": "Min",
 #     "sum": "Sum",
 # }
+
+
 
 collected_results = []
 # energies, ARAND = [], []
@@ -95,70 +98,37 @@ collected_results = []
 #             new_filename = new_filename.replace("_ignoreGlia.", "__ignoreGlia.")
 #             shutil.move(result_file, new_filename)
 
-max_nb_columns = 0
+max_nb_columns = 1
 
 for exp_name in EXP_NAMES:
-    os.path.join(project_dir, exp_name)
+
     scores_path = os.path.join(project_dir, exp_name, "scores")
+    results_collected = collect_score_configs(
+        scores_path,
+        score_files_have_IDs=True,
+        organize_configs_by=(('postproc_config', 'presets_collected'),)
+    )
 
-    # Get all the configs:
-    for item in os.listdir(scores_path):
-        if os.path.isfile(os.path.join(scores_path, item)):
-            filename = item
-            if not filename.endswith(".yml") or filename.startswith("."):
-                continue
-            skip = False
-            for char in REQUIRED_STRINGS:
-                if char not in filename:
-                    skip = True
-                    break
-            if not skip:
-                for excl_string in EXCLUDE_STRINGS:
-                    if excl_string in filename:
-                        skip = True
-                        break
-                for excl_string in INCLUDE_STRINGS:
-                    if excl_string in filename:
-                        skip = False
-                        break
-            if skip:
-                continue
-            result_file = os.path.join(scores_path, filename)
-            config = yaml2dict(result_file)
-
-            # print(filename.replace(".yml", "").split("__"))
-            # new_table_entrance = [exp_name + "__" + filename.replace(".yml", "")]
-            new_table_entrance = []
-            if INCLUDE_EXP_NAME:
-                new_table_entrance = [exp_name]
-            if INCLUDE_SCORE_FILENAME:
-                 new_table_entrance += \
-                                 ["{}".format(spl) for spl in filename.replace(".yml", "").split("__")]
-
-            nb_first_columns = len(new_table_entrance)
-            if nb_first_columns > max_nb_columns:
-                # Add empty columns to all previous rows:
-                cols_to_add = nb_first_columns - max_nb_columns
-                for i, row in enumerate(collected_results):
-                    collected_results[i] = row[:max_nb_columns] + ["" for _ in range(cols_to_add)] + \
-                                           row[max_nb_columns:]
-                max_nb_columns = nb_first_columns
-            elif nb_first_columns < max_nb_columns:
-                # Add empty columns only to this row:
-                cols_to_add = max_nb_columns - nb_first_columns
-                new_table_entrance += ["" for _ in range(cols_to_add)]
+    # Build headers:
+    new_table_entrance = ["Agglo type"]
+    for j, key in enumerate(keys_to_collect):
+        new_table_entrance.append(key[0][-1])
+    collected_results.append(new_table_entrance)
+    for agglo_name in results_collected:
+        new_table_entrance = [agglo_name]
+        values = [[] for _ in keys_to_collect]
+        for ID in results_collected[agglo_name]:
+            config = results_collected[agglo_name][ID]
 
             for j, key in enumerate(keys_to_collect):
                 # print(result_file)
                 cell_value = return_recursive_key_in_dict(config, key[0])
-                if key[1] == 'string':
-                    new_table_entrance.append("{0}".format(cell_value))
-                else:
-                    assert len(key) == 3, "Precision is expected"
-                    new_table_entrance.append("{0:.{prec}{type}}".format(cell_value, prec=key[2],
-                                                                     type=key[1]))
+                values[j].append(cell_value)
 
-            collected_results.append(new_table_entrance)
+        values = np.array(values)
+        mean_values = values.mean(axis=1)
+        new_table_entrance += [vl for vl in mean_values]
+        collected_results.append(new_table_entrance)
 
 # nb_col, nb_rows = len(collected_results[0]), len(collected_results)
 #
@@ -191,10 +161,10 @@ else:
 check_dir_and_create(export_dir)
 # print(collected_results)
 if LATEX_OUTPUT:
-    np.savetxt(os.path.join(export_dir, "collected_{}{}.csv".format(ID, POSTFIX_FILE)), collected_results, delimiter=' & ',
+    np.savetxt(os.path.join(export_dir, "summarized_{}{}.csv".format(ID, POSTFIX_FILE)), collected_results, delimiter=' & ',
            fmt='%s',
            newline=' \\\\\n')
 else:
-    np.savetxt(os.path.join(export_dir, "collected_{}{}.csv".format(ID, POSTFIX_FILE)), collected_results, delimiter='\t',
+    np.savetxt(os.path.join(export_dir, "summarized_{}{}.csv".format(ID, POSTFIX_FILE)), collected_results, delimiter=',',
                fmt='%s',
                newline=' \n')

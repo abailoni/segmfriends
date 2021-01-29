@@ -1,10 +1,10 @@
-experiment_name: subcrop_train_samples_LR1
+experiment_name: subcrop_train_samples_LR0
 
 postproc_config:
 #  TODO: name, prob
   from_superpixels: False
 
-  nb_thread_pools: 2
+  nb_thread_pools: 3
 
   iterated_options:
 #    preset: ["MEAN", "Mutex", "MEANconstr"] # Presets to be found in the presets folder
@@ -13,7 +13,7 @@ postproc_config:
     # TODO: The following options modify things at loading time, so they need to be handled specifically:
 #    sample: [ "A"]
     sample: ["B", "A", "C"]
-    edge_prob: 1.
+    edge_prob: 0.
     noise_factor: 0.
     crop_slice:
       A:

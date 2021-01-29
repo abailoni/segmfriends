@@ -1,5 +1,7 @@
 from .various import yaml2dict
 from copy import deepcopy
+import os
+import yaml
 
 def recursive_dict_update(source, target, zero_depth=True):
     # if zero_depth:
@@ -15,7 +17,7 @@ def recursive_dict_update(source, target, zero_depth=True):
 
 def return_recursive_key_in_dict(dictionary, keys):
     assert isinstance(dictionary, dict)
-    assert isinstance(keys, list)
+    assert isinstance(keys, (list, tuple))
     output = dictionary
     for key in keys:
         output = output[key]
@@ -232,3 +234,50 @@ def recursively_get_cmd(list_of_args, cmd_base_string, current_cmd=None, accumul
         raise ValueError("Something went wrong")
 
     return accumulated_cmds
+
+
+def collect_score_configs(scores_path,
+                          score_files_have_IDs=True,
+                  organize_configs_by=('presets_collected',
+                                       # ('GASP_kwargs', 'offsets_probabilities'),
+                                       'noise_factor'
+                                       )
+                          ):
+    """
+    Loads all the config files in the given directory `scores_path`.
+
+    Some of the values in the config files can be used to organize the collected configs (for example, organize them
+    by agglo type, by noise amount, etc...)
+
+    """
+    results_collected = {}
+    for filename in os.listdir(scores_path):
+        score_file = os.path.join(scores_path, filename)
+        if os.path.isfile(score_file):
+            if not filename.endswith('.yml') or filename.startswith("."):
+                continue
+            with open(score_file, 'rb') as f:
+                config_dict = yaml.load(f)
+
+
+            postproc_config = config_dict
+
+            new_results = {}
+            current_dict = new_results
+            for key in organize_configs_by:
+                key = key if isinstance(key, (list, tuple)) else [key]
+                key_value = return_recursive_key_in_dict(postproc_config, key)
+                assert not isinstance(key_value, dict), "Key in the dictionary was not fully specified"
+                key_value = key_value[0] if isinstance(key_value, (tuple, list)) else key_value
+                current_dict[key_value] = {}
+                current_dict = current_dict[key_value]
+
+            if score_files_have_IDs:
+                ID = filename.replace(".yml", "").split("__")[-1]
+            else:
+                ID = "0"
+            current_dict[ID] = config_dict
+
+            results_collected = recursive_dict_update(new_results, results_collected)
+
+    return results_collected
