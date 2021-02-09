@@ -1,19 +1,21 @@
-experiment_name: merge_noise_LR01
+experiment_name: split_biased_noise_LR01
+
 
 postproc_config:
-#  TODO: subcrop, name, noise, iterations, preset
+#  TODO: name, noise, iterations, preset, subcrop
   from_superpixels: False
-  noise_mod: "merge-biased" # 'merge-biased', "split-biased", "unbiased
+  noise_mod: "split-biased" # 'merge-biased', "split-biased", "unbiased
   save_segm: False
 
-  nb_thread_pools: 15
-  nb_iterations: 2
+  nb_thread_pools: 19
+  nb_iterations: 3
 
 
   iterated_options:
     preset: ["MEAN", "Mutex", "MEANconstr", "SUM", "SUMconstr"] # Presets to be found in the presets folder
 #    preset: ["MEAN"] # Presets to be found in the presets folder
     sample: ["B"]
+
     edge_prob: 0.1
 #    noise_factor: 3.
     noise_factor: [ 2.        ,  2.625     ,  3.25      ,  3.875     ,  4.5       ,

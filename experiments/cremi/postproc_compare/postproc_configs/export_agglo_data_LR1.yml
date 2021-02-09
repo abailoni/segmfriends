@@ -1,0 +1,35 @@
+experiment_name: export_agglo_data_LR1
+
+postproc_config:
+  from_superpixels: False
+  save_segm: False
+  compute_scores: False
+
+  nb_thread_pools: 3
+  nb_iterations: 1
+
+  save_agglomeration_data: True
+  overwrite_prev_files: True
+
+  GASP_kwargs:
+    return_extra_outputs: True
+    run_GASP_kwargs:
+      export_agglomeration_data: True
+
+
+
+  iterated_options:
+#    preset: ["MEAN", "Mutex", "MEANconstr", "SUM", "SUMconstr", "Mutex_constr"] # Presets to be found in the presets folder
+    preset: ["MEANconstr"] # Presets to be found in the presets folder
+#    preset: ["Mutex"] # Presets to be found in the presets folder
+    sample: [ "B"]
+    edge_prob: 1.
+    noise_factor: 0.
+    crop_slice:
+      B:
+        - ":, 0:90, 90:1320, 580: 1500"
+
+#    sub_crop_slice: ":,:2, 200:300, 200:300"
+    sub_crop_slice: ":,10:20, 200:500, 200:500"
+
+

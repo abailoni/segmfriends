@@ -35,18 +35,20 @@ SUM:
   parent_model: ['GASP']
   postproc:
     GASP_kwargs:
-        run_GASP_kwargs:
-          linkage_criteria: 'sum'
-          add_cannot_link_constraints: False
+      use_logarithmic_weights: True
+      run_GASP_kwargs:
+        linkage_criteria: 'sum'
+        add_cannot_link_constraints: False
 
 SUMconstr:
   parent_model: ['GASP']
   postproc:
     GASP_kwargs:
-        run_GASP_kwargs:
-          linkage_criteria: 'sum'
-          add_cannot_link_constraints: True
-          merge_constrained_edges_at_the_end: True
+      use_logarithmic_weights: True
+      run_GASP_kwargs:
+        linkage_criteria: 'sum'
+        add_cannot_link_constraints: True
+        merge_constrained_edges_at_the_end: True
 
 Mutex:
   parent_model: ['GASP']
@@ -57,7 +59,25 @@ Mutex:
           add_cannot_link_constraints: False
           use_efficient_implementations: False
 
+# This will give the same result, but in practice uses constraints:
+Mutex_constr:
+  parent_model: ['GASP']
+  postproc:
+    GASP_kwargs:
+        run_GASP_kwargs:
+          linkage_criteria: 'mutex_watershed'
+          add_cannot_link_constraints: True
+          merge_constrained_edges_at_the_end: True
+          use_efficient_implementations: False
 
+
+MutexEfficient:
+  parent_model: ['GASP']
+  postproc:
+    GASP_kwargs:
+        run_GASP_kwargs:
+          linkage_criteria: 'mutex_watershed'
+          use_efficient_implementations: True
 
 # ---------------------------------------
 WSDT:
@@ -70,7 +90,10 @@ WSDT:
 # ---------------------------------------
 
 
-
+removeLocaliltyConstraints:
+  postproc:
+    GASP_kwargs:
+      set_only_direct_neigh_as_mergeable: False
 
 
 

@@ -259,14 +259,14 @@ def collect_score_configs(scores_path,
             with open(score_file, 'rb') as f:
                 config_dict = yaml.load(f)
 
-
-            postproc_config = config_dict
+            config_dict["score_filename"] = filename
+            config_dict["dir_scores"] = scores_path
 
             new_results = {}
             current_dict = new_results
             for key in organize_configs_by:
                 key = key if isinstance(key, (list, tuple)) else [key]
-                key_value = return_recursive_key_in_dict(postproc_config, key)
+                key_value = return_recursive_key_in_dict(config_dict, key)
                 assert not isinstance(key_value, dict), "Key in the dictionary was not fully specified"
                 key_value = key_value[0] if isinstance(key_value, (tuple, list)) else key_value
                 current_dict[key_value] = {}

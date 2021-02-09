@@ -3,6 +3,7 @@ from segmfriends.utils import writeHDF5
 from GASP.utils.various import find_indices_direct_neighbors_in_offsets
 from segmfriends.utils.paths import get_vars_from_argv, change_paths_config_file
 from segmfriends.utils.opensimplex_noise import add_opensimplex_noise_to_affs
+from segmfriends.features import map_features_to_label_array
 
 from speedrun import BaseExperiment
 
@@ -233,7 +234,7 @@ class PostProcessingExperiment(BaseExperiment):
                                            apply_WS_growing=True,
                                            size_of_2d_slices=False,
                                            invert_affinities=invert_affinities)
-            pred_segm_WS = grow(affinities, pred_segm)
+            pred_segm_WS = grow(affinities.astype('float32'), pred_segm)
 
 
 
@@ -283,12 +284,12 @@ class PostProcessingExperiment(BaseExperiment):
                                'full_GASP_pipeline_runtime': comp_time})
         if post_proc_config.get("compute_scores", False):
             evals = segm_utils.cremi_score(GT, pred_segm, border_threshold=None, return_all_scores=True)
+            print("Scores achieved ({}): \n {}".format(presets_collected, evals))
             if grow_WS:
                 evals_WS = segm_utils.cremi_score(GT, pred_segm_WS, border_threshold=None, return_all_scores=True)
-                print("Scores achieved ({}): \n {}".format(presets_collected, evals_WS))
+                print("Scores achieved WS ({}): \n {}".format(presets_collected, evals_WS))
             else:
                 evals_WS = None
-                print("Scores achieved ({}): \n {}".format(presets_collected, evals))
             config_to_save.update(
                 {'score': evals, 'score_WS': evals_WS})
 
@@ -326,9 +327,32 @@ class PostProcessingExperiment(BaseExperiment):
                                    path_bbox_slice=path_bbox_slice[sample],
                                    ds_factor=(1,2,2))
 
-        if post_proc_config.get("save_UCM", False):
-            raise DeprecationWarning()
-            UCM, mergeTimes = out_dict['UCM'], out_dict['mergeTimes']
+        if post_proc_config.get("save_agglomeration_data", False):
+            node_stats, edge_data, action_data = out_dict["agglomeration_data"]
+            _, constrain_stats, merge_stats = edge_data
+            graph = out_dict["graph"]
+            is_local_edge = out_dict["is_local_edge"]
+            edge_sizes = out_dict["edge_sizes"]
+
+            edge_ids = np.rollaxis(graph.projectEdgesIDToPixels(), axis=3, start=0)
+            merge_stats_mapped = map_features_to_label_array(edge_ids, merge_stats)
+            constraint_stats_mapped = map_features_to_label_array(edge_ids, constrain_stats)
+
+            node_stats_mapped = node_stats.reshape(pred_segm.shape + (node_stats.shape[1],))
+
+            # To be saved:
+            # - edge_ids, merge and constr. data (mapped)
+            # - affinities and GT
+            # - (final segm)
+            exported_data_path = segm_file_path.replace(".h5", "_exported_data.h5")
+            writeHDF5(pred_segm.astype('uint32'), exported_data_path, 'segm', compression='gzip')
+            writeHDF5(merge_stats_mapped, exported_data_path, 'merge_stats', compression='gzip')
+            writeHDF5(constraint_stats_mapped, exported_data_path, 'constraint_stats', compression='gzip')
+            writeHDF5(affinities, exported_data_path, 'affinities', compression='gzip')
+            writeHDF5(GT, exported_data_path, 'GT', compression='gzip')
+            writeHDF5(node_stats_mapped, exported_data_path, 'node_stats', compression='gzip')
+            writeHDF5(edge_ids, exported_data_path, 'edge_ids', compression='gzip')
+
 
         # from segmfriends.transform.combine_segms_CY import find_segmentation_mistakes
         # result = find_segmentation_mistakes(segm_to_analyze, gt_to_analyze, ARAND_thresh=0.4, ignore_label=0,
@@ -486,6 +510,23 @@ class PostProcessingExperiment(BaseExperiment):
                         affinities = affinities[sub_crop_slc]
                         GT = GT[sub_crop_slc[1:]]
                         GT = vigra.analysis.labelVolumeWithBackground(GT.astype('uint32'))
+
+                        # Add some more white noise to the affinities, which is usually beneficial
+                        # to break ties with sigmoid outputs
+                        affinities = affinities.astype("float64")
+                        while True:
+                            print("Adding some white noise to affinities...")
+                            affinities += np.random.normal(scale=1e-3, size=affinities.shape)
+                            # Map back to 0 and 1 interval:
+                            affinities -= np.minimum(affinities.min(), 0.)
+                            affinities /= np.maximum(affinities.max(), 1.)
+                            # Debug: make sure not to have double values
+                            counts = np.unique(affinities, return_counts=True)[1]
+                            print("Max count: ", counts.max())
+                            # if counts.max() == 1:
+                            break
+
+                        # affinities = np.clip(affinities, 0., 1.)
 
                         collected_data["GT"][sample][crop][sub_crop] = GT
                         collected_data["affs"][sample][crop][sub_crop] = {}

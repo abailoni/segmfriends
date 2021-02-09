@@ -24,6 +24,8 @@ def make_plots(project_directory, exp_name):
                              ('postproc_config', 'noise_factor'))
     )
 
+    USE_LATEX = True
+
     colors = {'mutex_watershed': {False: 'C0'},
               'mean': {False: 'C1',
                        True: 'C8'},
@@ -31,7 +33,7 @@ def make_plots(project_directory, exp_name):
                       True: 'C3'},
               }
 
-    # key_y = ['score_WS', 'vi-merge']
+    # key_y = ['score_WS', 'vi-split']
     key_y = ['score_WS', 'adapted-rand']
     key_x = ['postproc_config', 'noise_factor']
     # key_y = ['score_WS', 'vi-split']
@@ -48,8 +50,8 @@ def make_plots(project_directory, exp_name):
     ]
 
     legend_labels = {
-        'vi-merge': "Variation of information - merge",
-        'vi-split': "Variation of information - split",
+        'vi-merge': "VI-merge",
+        'vi-split': "VI-split",
         'adapted-rand': "Rand-Score",
         'noise_factor': "\\textbf{Over-clustering} noise added to edge weights",
         'energy': 'Multicut energy'
@@ -61,17 +63,18 @@ def make_plots(project_directory, exp_name):
     }
 
     axis_ranges = {
-        # 'vi-merge': [0.15, 0.35],
+        'vi-merge': None,
         'vi-split': None,
-        # 'adapted-rand': [0.027, 0.052],
+        'adapted-rand': [0.65, 0.98],
     }
 
     for all_keys in list_all_keys:
-        rc('text', usetex=True)
+        if USE_LATEX:
+            rc('text', usetex=True)
         matplotlib.rcParams.update({'font.size': 12})
         # f, axes = plt.subplots(ncols=1, nrows=2, figsize=(9, 7))
 
-        for k, selected_edge_prob in enumerate([0., 1.]):
+        for k, selected_edge_prob in enumerate([1., 0.1]):
             f, axes = plt.subplots(ncols=1, nrows=1, figsize=(9, 3.8))
 
             ax = axes
@@ -99,7 +102,10 @@ def make_plots(project_directory, exp_name):
                             data_dict = sub_dict[noise_factor][ID]
 
                             # TODO: update this shit
-                            if data_dict["postproc_config"]["GASP_kwargs"]["offsets_probabilities"] != selected_edge_prob:
+                            off_prob_1 = data_dict["postproc_config"]["GASP_kwargs"].get("offsets_probabilities", None)
+                            off_prob_2 = data_dict["postproc_config"].get("edge_prob", None)
+                            off_prob = off_prob_1 if off_prob_1 is not None else off_prob_2
+                            if off_prob != selected_edge_prob:
                                 continue
 
                             multiple_VI_split.append(
@@ -215,8 +221,8 @@ def make_plots(project_directory, exp_name):
 
             # vis_utils.set_log_tics(ax, [-2, 0], [10], format="%.2f", axis='y')
 
-            ax.set_ylim([0.65, 0.98])
             ax.set_xlim([2, 10])
+
 
             # vis_utils.set_log_tics(ax, [-2,0], [10],  format="%.2f", axis='x')
 
@@ -253,10 +259,10 @@ def make_plots(project_directory, exp_name):
 
             # f.suptitle("Crop of CREMI sample {} (90 x 300 x 300)".format(sample))
             f.savefig(os.path.join(plot_dir,
-                                   'merge_noise_plots_{}.pdf'.format(k)),
+                                   'noise_plots_{}_{}.pdf'.format(key_y[-1], k)),
                       format='pdf')
 
 
 
 
-make_plots(os.path.join(get_trendytukan_drive_dir(), "projects/new_agglo_compare"), "merge_noise_LR1")
+make_plots(os.path.join(get_trendytukan_drive_dir(), "projects/new_agglo_compare"), "merge_biased_noise_LR01")

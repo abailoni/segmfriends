@@ -3,6 +3,11 @@
 shortcuts:
   z_size: &z_size 12
   xy_size: &xy_size 272
+#  rule of thumb:
+#  If Shape of final prediction: torch.Size([1, x, x]) and
+#  Input size (1, y, y) then
+#  Padding of the dataset should be >= (y-x)/2 if you want to avoid border effects with parts that are not predicted.
+#  (Assuming that the output of the model is at the same resolution of the input dataset)
   padding: &dataset_padding [[0,0], [50,50], [50,50]]
 
 

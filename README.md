@@ -9,7 +9,7 @@ This version can run all the clustering/segmentation algorithms included the pac
 - Clone the repository: `git clone https://github.com/abailoni/segmfriends.git`
 - `cd ./segmfriends`
 - To install the package, you will need [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) or [miniconda](https://docs.conda.io/en/latest/miniconda.html)
-- Once you have it, run `conda create -n segmFr -c abailoni -c conda-forge gasp`
+- Once you have it, run `conda create -n segmFr -c abailoni -c conda-forge gasp cython`
 - Activate your new environment with `conda activate segmFr`
 - `python setup.py install` (or `python setup.py develop` if you plan to work on the package)
 

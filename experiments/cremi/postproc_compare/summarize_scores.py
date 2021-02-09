@@ -16,7 +16,7 @@ from segmfriends.utils.config_utils import collect_score_configs
 project_dir = os.path.join(get_trendytukan_drive_dir(), "projects/new_agglo_compare")
 
 EXP_NAMES = [
-    "subcrop_train_samples_LR1",
+    "subcrop_train_samples_LR01_c",
 ]
 
 REQUIRED_STRINGS = [
@@ -36,7 +36,7 @@ EXCLUDE_STRINGS = [
 INCLUDE_STRINGS = [
 ]
 
-POSTFIX_FILE = "_MWS_and_MEAN"
+POSTFIX_FILE = "_all"
 
 LATEX_OUTPUT = False
 

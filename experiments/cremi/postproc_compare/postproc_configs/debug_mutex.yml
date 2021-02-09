@@ -1,0 +1,39 @@
+experiment_name: debug_MWS_1
+
+postproc_config:
+  from_superpixels: False
+  save_segm: True
+  compute_scores: True
+
+  nb_thread_pools: 3
+  nb_iterations: 1
+
+  save_agglomeration_data: False
+  connected_components_on_final_segm: False
+  overwrite_prev_files: True
+  WS_growing: False
+
+  GASP_kwargs:
+    return_extra_outputs: True
+    set_only_direct_neigh_as_mergeable: True
+    run_GASP_kwargs:
+      export_agglomeration_data: False
+
+
+
+  iterated_options:
+#    preset: ["MEAN", "Mutex_constr", "MEANconstr", "SUM", "SUMconstr"] # Presets to be found in the presets folder
+    preset: ["Mutex_constr", "Mutex", "MutexEfficient"] # Presets to be found in the presets folder
+#    preset: ["MutexEfficient", "Mutex", "Mutex_constr"] # Presets to be found in the presets folder
+    sample: [ "B"]
+    edge_prob: 1.
+    noise_factor: 0.
+    crop_slice:
+      B:
+        - ":, 0:90, 90:1320, 580: 1500"
+
+#    sub_crop_slice: ":,10:15, 200:350, 200:350"
+    sub_crop_slice: ":,10:20, 200:500, 200:500"
+#    sub_crop_slice: ":,10:20, 200:500, 200:500"
+
+

@@ -1,0 +1,41 @@
+experiment_name: unbiased_noise_LR01_deb
+
+
+postproc_config:
+#  TODO: name, noise, iterations, preset, subcrop
+  from_superpixels: False
+  noise_mod: "unbiased" # 'merge-biased', "split-biased", "unbiased
+  save_segm: False
+
+  nb_thread_pools: 3
+  nb_iterations: 1
+
+  save_agglomeration_data: True
+  overwrite_prev_files: True
+
+  GASP_kwargs:
+    return_extra_outputs: True
+    run_GASP_kwargs:
+      export_agglomeration_data: True
+
+
+
+  iterated_options:
+    preset: ["MEAN", "Mutex", "MEANconstr", "SUM", "SUMconstr"] # Presets to be found in the presets folder
+#    preset: ["MEAN"] # Presets to be found in the presets folder
+    sample: ["B"]
+
+    edge_prob: 0.1
+    noise_factor: 8.5
+#    noise_factor: [ 2.        ,  2.625     ,  3.25      ,  3.875     ,  4.5       ,
+#                    4.5       ,  4.89285714,  5.28571429,  5.67857143,  6.07142857,
+#                    6.46428571,  6.85714286,  7.25      ,  7.64285714,  8.03571429,
+#                    8.42857143,  8.82142857,  9.21428571,  9.60714286, 10. ]
+    crop_slice:
+      B:
+        - ":, 0:90, 90:1320, 580: 1500"
+
+#    sub_crop_slice: ":,:2, 200:300, 200:300"
+    sub_crop_slice: ":,:, 200:500, 200:500"
+
+
