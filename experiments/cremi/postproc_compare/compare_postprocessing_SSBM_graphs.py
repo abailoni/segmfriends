@@ -26,9 +26,10 @@ from GASP.segmentation.watershed import SizeThreshAndGrowWithWS
 import time
 
 try:
-    import signet
+    import signet.block_models as block_models
+    import signet.cluster as signet_cluster
 except ImportError:
-    signet = None
+    block_models, signet_cluster = None, None
 
 from sklearn.metrics import adjusted_rand_score
 from scipy import sparse
@@ -80,7 +81,7 @@ class SSBMPostProcessingExperiment(BaseExperiment):
 
         self.auto_setup()
 
-        assert signet is not None, "signet module is needed for SSBM experiments " \
+        assert signet_cluster is not None, "signet module is needed for SSBM experiments " \
                                    "https://github.com/alan-turing-institute/SigNet"
 
         # Where the segmentation will be saved: (each experiment is in a sub-folder)
@@ -112,7 +113,7 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         # Create Pool and run post-processing:
         # TODO: replace with pool, but we need to pass a function, not a method
         pool = ThreadPool(processes=nb_thread_pools)
-        starmap_with_kwargs(pool, self.run_clustering, args_iter=repeat([]),
+        starmap_with_kwargs(pool, self.run_method_on_graph, args_iter=repeat([]),
                             kwargs_iter=kwargs_iter)
         pool.close()
         pool.join()
@@ -122,6 +123,7 @@ class SSBMPostProcessingExperiment(BaseExperiment):
                             p=None,
                             signed_edge_weights=None,
                             graph=None,
+                            uv_ids=None,
                             A_p=None,
                             A_n=None,
                             eta=None,
@@ -139,7 +141,7 @@ class SSBMPostProcessingExperiment(BaseExperiment):
                                       use_efficient_implementations=False,
                                       **run_GASP_kwargs)
         elif segm_pipeline_type == "spectral":
-            c = signet.cluster.Cluster((A_p, A_n))
+            c = signet_cluster.Cluster((A_p, A_n))
             spectral_method_name = post_proc_config.get("spectral_method_name")
             k = post_proc_config.get("SSBM_kwargs").get("k")
             try:
@@ -249,7 +251,7 @@ class SSBMPostProcessingExperiment(BaseExperiment):
                         print("Creating SSBM model...")
 
 
-                        (A_p, A_n), GT_labels = signet.block_models.SSBM(n=n, k=k, pin=p, etain=eta, values='gaussian',
+                        (A_p, A_n), GT_labels = block_models.SSBM(n=n, k=k, pin=p, etain=eta, values='gaussian',
                                                                  guassian_sigma=gauss_sigma)
 
                         # Symmetrize matrices:
@@ -270,7 +272,7 @@ class SSBMPostProcessingExperiment(BaseExperiment):
                         graph = UndirectedGraph(n)
                         graph.insertEdges(uv_ids)
                         nb_edges = graph.numberOfEdges
-                        assert graph.numberOfEdges == uv_ids.shape[0]
+                        assert nb_edges == uv_ids.shape[0]
 
                         # Test connected components:
                         from nifty.graph import components
@@ -289,6 +291,7 @@ class SSBMPostProcessingExperiment(BaseExperiment):
                                 'p': p,
                                 'signed_edge_weights': signed_edge_weights,
                                 'graph': graph,
+                                'uv_ids': uv_ids
                             }
                             kwargs_collected.append(new_kwargs)
 

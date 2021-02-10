@@ -43,9 +43,8 @@ postproc_config:
   # configs files with those names defined in the presets folder) and three CREMI samples, in total we will get 9 runs.
 
   iterated_options:
-    preset: ["MEAN", "MEANconstr"] # Presets to be found in the presets folder
-    edge_prob: 1.
-    noise_factor: 0.
+    preset: ["MEAN", "SPONGE_sym"] # Presets to be found in the presets folder
+    eta: 0.1
 
   # How many segmentation pipelines to run at the same time:
   nb_thread_pools: 1
@@ -53,11 +52,12 @@ postproc_config:
   # We could want to run the same setup multiple times (for example to collect statistics about noise/randomness etc)
   nb_iterations: 1
 
-  spectral_method_name: ""
+  # Available options: "SPONGE", "SPONGE-sym", "BNC", "L-sym"
+  spectral_method_name: "SPONGE-sym"
 
   SSBM_kwargs:
-    n: 1e5
-    k: 100
+    n: 1000 # 100000
+    k: 10 # 100
     p: 0.1
     gaussian_sigma: 0.1
 
