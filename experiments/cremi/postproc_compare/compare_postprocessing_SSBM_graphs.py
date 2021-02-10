@@ -138,7 +138,6 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         if segm_pipeline_type == "GASP":
             run_GASP_kwargs = post_proc_config.get("GASP_kwargs").get("run_GASP_kwargs")
             node_labels, _ = run_GASP(graph, signed_edge_weights,
-                                      use_efficient_implementations=False,
                                       **run_GASP_kwargs)
         elif segm_pipeline_type == "spectral":
             c = signet_cluster.Cluster((A_p, A_n))
