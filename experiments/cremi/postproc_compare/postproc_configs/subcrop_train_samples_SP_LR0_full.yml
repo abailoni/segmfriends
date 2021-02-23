@@ -1,0 +1,29 @@
+experiment_name: subcrop_train_samples_SP_LR0_full
+
+postproc_config:
+#  TODO: name, prob
+  from_superpixels: True
+#  save_superpixel_segmentation: True
+
+  nb_thread_pools: 1
+
+  iterated_options:
+    preset: ["MEAN", "Mutex", "MEANconstr", "MAXconstr", "MIN", "MAX", "SUMnoLogs", "SUMconstrNoLogs"] # Presets to be found in the presets folder
+#    preset: ["SUMnoLogs", "SUMconstrNoLogs", "SUM", "SUMconstr"] # Presets to be found in the presets folder
+#    preset: ["SUM", "SUMconstr"] # Presets to be found in the presets folder
+#    preset: ["MEAN"] # Presets to be found in the presets folder
+    # TODO: The following options modify things at loading time, so they need to be handled specifically:
+#    sample: [ "A"]
+    sample: ["B", "A", "C"]
+    edge_prob: 0.
+    noise_factor: 0.
+    crop_slice:
+      A: ":, :,:,:"
+      B: ":, :, 90:, 580: 1900"
+      C: ":, :, 70:1450, 95:1425"
+#    sub_crop_slice: ":,:, 200:300, 200:300"
+    sub_crop_slice: ":,:, :, :"
+
+  WSDT_kwargs:
+    intersect_with_boundary_pixels: False
+

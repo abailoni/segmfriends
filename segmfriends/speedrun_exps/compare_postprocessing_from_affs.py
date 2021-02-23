@@ -4,6 +4,8 @@ from GASP.utils.various import find_indices_direct_neighbors_in_offsets
 from segmfriends.utils.paths import get_vars_from_argv, change_paths_config_file
 from segmfriends.utils.opensimplex_noise import add_opensimplex_noise_to_affs
 from segmfriends.features import map_features_to_label_array
+from segmfriends.utils.cremi_utils import prepare_submission
+import warnings
 
 from speedrun import BaseExperiment
 
@@ -179,12 +181,13 @@ class PostProcessingExperiment(BaseExperiment):
         # Pass mask of used edges if necessary:
         if mask_used_edges is not None:
             assert segm_pipeline_type == "GASP", "Only GASP supports mask of edges at the moment!"
-            run_kwargs = {"mask_used_edges": mask_used_edges}
+            run_kwargs["mask_used_edges"] = mask_used_edges
 
         run_args = []
-        if post_proc_config.get("restrict_to_GT_bbox", False):
-            assert post_proc_config.get("from_superpixels", False), "Restricting to GT box is only supported from superpixels at the moment."
-            run_args.append(GT != 0)
+        restrict_to_GT_bbox = post_proc_config.get("restrict_to_GT_bbox", False)
+        if restrict_to_GT_bbox:
+            run_kwargs["foreground_mask"] = GT != 0
+            # run_args.append(GT != 0)
 
         print("Starting prediction...")
         tick = time.time()
@@ -213,12 +216,17 @@ class PostProcessingExperiment(BaseExperiment):
             pred_segm = vigra.analysis.labelVolume(segm_2D.astype('uint32'))
 
         # Relabel consecutive:
-        pred_segm = vigra.analysis.relabelConsecutive(pred_segm.astype('uint64'))[0]
+        save_agglomeration_data = post_proc_config.get("save_agglomeration_data", False)
+        if not save_agglomeration_data:
+            pred_segm = vigra.analysis.relabelConsecutive(pred_segm.astype('uint64'))[0]
 
         # Some algorithms could return clusters with multiple connected compoents in the image plane
         # (e.g. MWS (efficient implementation) with long-range attractive connections), so we may want
         # to run connected components:
         if post_proc_config.get("connected_components_on_final_segm", False):
+            if save_agglomeration_data:
+                warnings.warn("Runnig connected components on final segm, so exported agglo_data won't match the predictions")
+
             # Vigra cannot handle numbers higher than uint32:
             if pred_segm.max() > np.uint32(-1):
                 raise ValueError("uint32 limit reached!")
@@ -233,6 +241,7 @@ class PostProcessingExperiment(BaseExperiment):
                                            hmap_kwargs=post_proc_config['prob_map_kwargs'],
                                            apply_WS_growing=True,
                                            size_of_2d_slices=False,
+                                           with_background=restrict_to_GT_bbox,
                                            invert_affinities=invert_affinities)
             pred_segm_WS = grow(affinities.astype('float32'), pred_segm)
 
@@ -271,13 +280,17 @@ class PostProcessingExperiment(BaseExperiment):
         config_to_save["postproc_config"]['noise_factor'] = noise_factor
 
         # Restrict to GT box:
-        if grow_WS:
-            pred_segm_WS += 1
-            pred_segm_WS[GT == 0] = 0
-            pred_segm_WS = vigra.analysis.labelVolumeWithBackground(pred_segm_WS.astype('uint32'))
-        pred_segm += 1
-        pred_segm[GT == 0] = 0
-        pred_segm = vigra.analysis.labelVolumeWithBackground(pred_segm.astype('uint32'))
+        if restrict_to_GT_bbox:
+            # TODO: Check that this should not be necessary. Background label is already zero (also for WS)
+            pass
+            # And clearly we do not need to run connected components in that case
+            # if grow_WS:
+            #     pred_segm_WS += 1
+            #     pred_segm_WS[GT == 0] = 0
+            #     pred_segm_WS = vigra.analysis.labelVolumeWithBackground(pred_segm_WS.astype('uint32'))
+            # pred_segm += 1
+            # pred_segm[GT == 0] = 0
+            # pred_segm = vigra.analysis.labelVolumeWithBackground(pred_segm.astype('uint32'))
 
         # Compute scores:
         config_to_save.update({'multicut_energy': multicut_energy.item(), 'run_GASP_runtime': out_dict['runtime'],
@@ -300,6 +313,12 @@ class PostProcessingExperiment(BaseExperiment):
 
         # Save segmentation:
         if post_proc_config.get("save_segm", True):
+
+            if post_proc_config.get("save_superpixel_segmentation", True) and hasattr(segmentation_pipeline, "superpixel_generator"):
+                if segmentation_pipeline.superpixel_generator is not None:
+                    SP_segm = segmentation_pipeline.superpixel_generator(affinities, *run_args)
+                    writeHDF5(SP_segm.astype('uint32'), segm_file_path, 'SP_segm', compression='gzip')
+
             print(segm_file_path)
             if grow_WS:
                 pred_segm_WS = np.pad(pred_segm_WS, pad_width=[(pad, pad) for pad in global_pad[1:]], mode="constant")
@@ -318,40 +337,48 @@ class PostProcessingExperiment(BaseExperiment):
                 io.imsave(segm_file_path.replace(".h5", ".tif"), binary_boundaries.astype('float32'))
 
             if post_proc_config.get("prepare_submission", False):
-                raise DeprecationWarning("Get it back from old repo")
-                from vaeAffs.postproc.utils import prepare_submission
-                # FIXME: generalize the ds factor and path to bbox
+                # TODO: generalize the ds factor
                 path_bbox_slice = self.get("volume_config/paths_padded_boxes", ensure_exists=True)
                 prepare_submission(sample, segm_file_path,
                                    inner_path_segm="segm_WS" if grow_WS else "segm",
-                                   path_bbox_slice=path_bbox_slice[sample],
-                                   ds_factor=(1,2,2))
+                                   path_bbox_slice=path_bbox_slice[sample])
 
-        if post_proc_config.get("save_agglomeration_data", False):
+        if save_agglomeration_data:
             node_stats, edge_data, action_data = out_dict["agglomeration_data"]
-            _, constrain_stats, merge_stats = edge_data
+            contracted_graph_data, constrain_stats, merge_stats = edge_data
             graph = out_dict["graph"]
+
             is_local_edge = out_dict["is_local_edge"]
             edge_sizes = out_dict["edge_sizes"]
 
-            edge_ids = np.rollaxis(graph.projectEdgesIDToPixels(), axis=3, start=0)
-            merge_stats_mapped = map_features_to_label_array(edge_ids, merge_stats)
-            constraint_stats_mapped = map_features_to_label_array(edge_ids, constrain_stats)
+            # These only works for LongRangeGridGraph for the moment:
+            exported_data_path = segm_file_path.replace(".h5", "_exported_data.h5")
+            if hasattr(graph, "projectEdgesIDToPixels"):
+                edge_ids = np.rollaxis(graph.projectEdgesIDToPixels(), axis=3, start=0)
+                merge_stats_mapped = map_features_to_label_array(edge_ids, merge_stats)
+                constraint_stats_mapped = map_features_to_label_array(edge_ids, constrain_stats)
+                node_stats_mapped = node_stats.reshape(pred_segm.shape + (node_stats.shape[1],))
 
-            node_stats_mapped = node_stats.reshape(pred_segm.shape + (node_stats.shape[1],))
+                writeHDF5(merge_stats_mapped, exported_data_path, 'merge_stats', compression='gzip')
+                writeHDF5(constraint_stats_mapped, exported_data_path, 'constraint_stats', compression='gzip')
+                writeHDF5(edge_ids, exported_data_path, 'edge_ids', compression='gzip')
+                writeHDF5(node_stats_mapped, exported_data_path, 'node_stats', compression='gzip')
+            else:
+                writeHDF5(merge_stats, exported_data_path, 'merge_stats', compression='gzip')
+                writeHDF5(constrain_stats, exported_data_path, 'constraint_stats', compression='gzip')
+                writeHDF5(node_stats, exported_data_path, 'node_stats', compression='gzip')
+
 
             # To be saved:
             # - edge_ids, merge and constr. data (mapped)
             # - affinities and GT
             # - (final segm)
-            exported_data_path = segm_file_path.replace(".h5", "_exported_data.h5")
             writeHDF5(pred_segm.astype('uint32'), exported_data_path, 'segm', compression='gzip')
-            writeHDF5(merge_stats_mapped, exported_data_path, 'merge_stats', compression='gzip')
-            writeHDF5(constraint_stats_mapped, exported_data_path, 'constraint_stats', compression='gzip')
             writeHDF5(affinities, exported_data_path, 'affinities', compression='gzip')
             writeHDF5(GT, exported_data_path, 'GT', compression='gzip')
-            writeHDF5(node_stats_mapped, exported_data_path, 'node_stats', compression='gzip')
-            writeHDF5(edge_ids, exported_data_path, 'edge_ids', compression='gzip')
+            writeHDF5(action_data, exported_data_path, 'action_data', compression='gzip')
+            writeHDF5(contracted_graph_data, exported_data_path, 'contracted_graph_data', compression='gzip')
+
 
 
         # from segmfriends.transform.combine_segms_CY import find_segmentation_mistakes
@@ -505,6 +532,10 @@ class PostProcessingExperiment(BaseExperiment):
                                             run_connected_components=False,
                                             **affs_vol_config)
 
+                        if affinities.dtype == "uint8":
+                            print("Converting affinities to float")
+                            affinities = affinities.astype('float32') / 255.
+
                         assert GT.shape == affinities.shape[1:], "Loaded GT and affinities do not match: {} - {}".format(GT.shape, affinities.shape[1:])
                         sub_crop_slc = segm_utils.parse_data_slice(sub_crop)
                         affinities = affinities[sub_crop_slc]
@@ -514,17 +545,20 @@ class PostProcessingExperiment(BaseExperiment):
                         # Add some more white noise to the affinities, which is usually beneficial
                         # to break ties with sigmoid outputs
                         affinities = affinities.astype("float64")
-                        while True:
-                            print("Adding some white noise to affinities...")
-                            affinities += np.random.normal(scale=1e-3, size=affinities.shape)
-                            # Map back to 0 and 1 interval:
-                            affinities -= np.minimum(affinities.min(), 0.)
-                            affinities /= np.maximum(affinities.max(), 1.)
-                            # Debug: make sure not to have double values
-                            counts = np.unique(affinities, return_counts=True)[1]
-                            print("Max count: ", counts.max())
-                            # if counts.max() == 1:
-                            break
+                        # while True:
+                        print("Adding some white noise to affinities...")
+                        affinities += np.random.normal(scale=1e-4, size=affinities.shape)
+                        # KEEP IN MIND: if instead of clipping I renormalize by setting max 1 and min 0, I could end up
+                        # shifting all weights!!
+                        # Better: clipping
+                        affinities = np.clip(affinities, 0., 1.)
+
+                        # affinities -= np.minimum(affinities.min(), 0.)
+                        # affinities /= np.maximum(affinities.max(), 1.)
+                        # Debug: make sure not to have double values
+                        # counts = np.unique(affinities, return_counts=True)[1]
+                        # print("Max count: ", counts.max())
+                        # if counts.max() == 1:
 
                         # affinities = np.clip(affinities, 0., 1.)
 
@@ -607,7 +641,7 @@ if __name__ == '__main__':
     print(sys.argv[1])
 
     source_path = os.path.dirname(os.path.realpath(__file__))
-    config_path = os.path.join(source_path, 'postproc_configs')
+    config_path = os.path.join(source_path, '../../experiments/cremi/postproc_compare/postproc_configs')
     experiments_path = os.path.join(source_path, 'runs')
 
     path_types = ["DATA_HOME", "LOCAL_DRIVE"]

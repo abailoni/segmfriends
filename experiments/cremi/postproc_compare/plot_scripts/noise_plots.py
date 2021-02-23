@@ -33,8 +33,8 @@ def make_plots(project_directory, exp_name):
                       True: 'C3'},
               }
 
-    # key_y = ['score_WS', 'vi-split']
-    key_y = ['score_WS', 'adapted-rand']
+    key_y = ['score_WS', 'vi-merge']
+    # key_y = ['score_WS', 'adapted-rand']
     key_x = ['postproc_config', 'noise_factor']
     # key_y = ['score_WS', 'vi-split']
     # key_y = ['energy']
@@ -59,7 +59,7 @@ def make_plots(project_directory, exp_name):
     }
 
     update_rule_names = {
-        'sum': "GASP Sum", 'mutex_watershed': "GASP Abs Max", 'mean': "GASP Average"
+        'sum': "GAEC (Sum)", 'mutex_watershed': "MWS", 'mean': "HC-Avg"
     }
 
     axis_ranges = {

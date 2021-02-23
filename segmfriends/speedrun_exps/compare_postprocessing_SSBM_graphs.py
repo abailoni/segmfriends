@@ -119,27 +119,31 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         pool.join()
 
     def run_method_on_graph(self, preset,
-                            GT_labels,
-                            p=None,
+                            GT_labels=None,
+                            pin=None,
                             signed_edge_weights=None,
                             graph=None,
                             uv_ids=None,
                             A_p=None,
                             A_n=None,
-                            eta=None,
-                            gauss_sigma=None):
+                            etain=None,
+                            gauss_sigma=None,
+                            problem_subdir=None,
+                            problem_name=None):
         post_proc_config, _ = self.apply_presets_to_postproc_config([preset])
 
         segm_pipeline_type = post_proc_config.get("segm_pipeline_type")
 
         # Run clustering:
         tick = time.time()
-        print(preset)
+        runtime_GASP = 0
         if segm_pipeline_type == "GASP":
             run_GASP_kwargs = post_proc_config.get("GASP_kwargs").get("run_GASP_kwargs")
-            node_labels, _ = run_GASP(graph, signed_edge_weights,
+            outputs = run_GASP(graph, signed_edge_weights,
                                       **run_GASP_kwargs)
+            node_labels, runtime_GASP = outputs[0], outputs[1]
         elif segm_pipeline_type == "spectral":
+            assert A_n is not None
             c = signet_cluster.Cluster((A_p, A_n))
             spectral_method_name = post_proc_config.get("spectral_method_name")
             k = post_proc_config.get("SSBM_kwargs").get("k")
@@ -163,32 +167,39 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         else:
             raise NotImplementedError
 
+        edge_labels = graph.nodeLabelsToEdgeLabels(node_labels)
+        MC_energy = (signed_edge_weights * edge_labels).sum()
+
         runtime = time.time() - tick
 
         # Compute scores and stats:
         # Convert to "volume" array to compute cremi score:
-        scores = segm_utils.cremi_score(np.expand_dims(np.expand_dims(GT_labels+1, axis=0), axis=0),
-                               np.expand_dims(np.expand_dims(node_labels, axis=0), axis=0),
-                               return_all_scores=True, run_connected_components=False)
-        ARAND_score = adjusted_rand_score(node_labels, GT_labels)
-        counts = np.bincount(node_labels.astype('int64'))
-        nb_clusters = (counts > 0).sum()
-        biggest_clusters = np.sort(counts)[::-1][:10]
+        if GT_labels is not None:
+            scores = segm_utils.cremi_score(np.expand_dims(np.expand_dims(GT_labels+1, axis=0), axis=0),
+                                   np.expand_dims(np.expand_dims(node_labels, axis=0), axis=0),
+                                   return_all_scores=True, run_connected_components=False)
+            ARAND_score = adjusted_rand_score(node_labels, GT_labels)
+            print(runtime, ARAND_score, scores)
+        # counts = np.bincount(node_labels.astype('int64'))
+        # nb_clusters = (counts > 0).sum()
+        # biggest_clusters = np.sort(counts)[::-1][:10]
 
-        print(runtime, ARAND_score, scores)
 
 
         # ------------------------------
         # SAVING RESULTS:
         # ------------------------------
         strings_to_include_in_filenames = [segm_pipeline_type] + [preset]
-        config_file_path, _ = \
+        if problem_name is not None:
+            strings_to_include_in_filenames = [problem_name] + strings_to_include_in_filenames
+        config_file_path, segm_file_path = \
             self.get_valid_out_paths(strings_to_include_in_filenames,
                                      overwrite_previous=post_proc_config.get("overwrite_prev_files", False),
-                                     filename_postfix=post_proc_config.get('filename_postfix', None)
+                                     filename_postfix=post_proc_config.get('filename_postfix', None),
+                                     subdir=problem_subdir
                                      )
 
-        print(config_file_path)
+        # print(config_file_path)
         config_to_save = deepcopy(self._config)
         config_to_save.pop("postproc_presets")
 
@@ -196,23 +207,52 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         config_to_save['postproc_config'] = post_proc_config
 
         # Save configuration of the iterated kwargs:
-        config_to_save["postproc_config"]["SSBM_kwargs"]["eta"] = eta
-        config_to_save["postproc_config"]["SSBM_kwargs"]["p"] = p
-        config_to_save["postproc_config"]["SSBM_kwargs"]["gauss_sigma"] = gauss_sigma
+        if "SSBM_kwargs" in config_to_save["postproc_config"]:
+            config_to_save["postproc_config"]["SSBM_kwargs"]["etain"] = etain
+            config_to_save["postproc_config"]["SSBM_kwargs"]["pin"] = pin
+            config_to_save["postproc_config"]["SSBM_kwargs"]["gauss_sigma"] = gauss_sigma
 
         # Include scores in config:
+        config_to_save["nb_nodes"] = graph.numberOfNodes
+        config_to_save["nb_edges"] = graph.numberOfEdges
         config_to_save["runtime"] = runtime
-        config_to_save["RAND_score"] = ARAND_score
-        config_to_save['scores'] = scores
-        config_to_save["nb_clusters"] = int(nb_clusters)
-        config_to_save["biggest_clusters"] = [int(size) for size in biggest_clusters]
+        config_to_save["runtime_GASP"] = runtime_GASP
+        if GT_labels is not None:
+            config_to_save["RAND_score"] = ARAND_score
+            config_to_save['scores'] = scores
+        config_to_save["multicut_energy"] = MC_energy.item()
+        config_to_save["postproc_config"]["presets_collected"] = preset
+        if problem_subdir is not None:
+            config_to_save["problem_subdir"] = problem_subdir
+        if problem_name is not None:
+            config_to_save["problem_name"] = problem_name
+        # config_to_save["nb_clusters"] = int(nb_clusters)
+        # config_to_save["biggest_clusters"] = [int(size) for size in biggest_clusters]
 
         with open(config_file_path, 'w') as f:
             json.dump(config_to_save, f, indent=4, sort_keys=True)
 
+        if post_proc_config.get("save_agglomeration_data", False):
+            assert segm_pipeline_type == "GASP", "Only GASP can export data"
+            assert len(outputs)==3, "In order to export agglo data, set GASP option `export_agglomeration_data` to True"
+            node_stats, edge_data, action_data = outputs[2]["agglomeration_data"]
+            _, constrain_stats, merge_stats = edge_data
+
+            uv_ids = graph.uvIds()
+
+            # Saving:
+            exported_data_path = segm_file_path.replace(".h5", "_exported_data.h5")
+            writeHDF5(node_labels.astype('uint32'), exported_data_path, 'node_labels', compression='gzip')
+            writeHDF5(uv_ids, exported_data_path, 'uv_ids', compression='gzip')
+            writeHDF5(constrain_stats, exported_data_path, 'constrain_stats', compression='gzip')
+            writeHDF5(merge_stats, exported_data_path, 'merge_stats', compression='gzip')
+            if GT_labels is not None:
+                writeHDF5(GT_labels, exported_data_path, 'GT_labels', compression='gzip')
+            writeHDF5(action_data, exported_data_path, 'action_data', compression='gzip')
+
+
 
     def get_kwargs_for_each_run(self):
-        # TODO: add option to load GT and affs directly in run_agglomeration? (More memory efficient)
         nb_iterations = self.get("postproc_config/nb_iterations", 1)
 
         kwargs_collected = []
@@ -220,13 +260,13 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         postproc_config = self.get("postproc_config", ensure_exists=True)
         iterated_options = self.get("postproc_config/iterated_options", {})
 
-        SSBM_kwargs = self.get("postproc_config/SSBM_kwargs", ensure_exists=True)
+        SSBM_kwargs = deepcopy(self.get("postproc_config/SSBM_kwargs", ensure_exists=True))
 
         # Initialize default iterated options:
         iterated_options.setdefault("preset", [postproc_config.get("preset", None)])
-        iterated_options.setdefault("eta", [SSBM_kwargs.get("eta", 0.1)])
-        iterated_options.setdefault("p", [SSBM_kwargs.get("p", 0.1)])
-        iterated_options.setdefault("gaussian_sigma", [SSBM_kwargs.get("gaussian_sigma", 0.1)])
+        iterated_options.setdefault("etain", [SSBM_kwargs.pop("etain", 0.1)])
+        iterated_options.setdefault("pin", [SSBM_kwargs.pop("pin", 0.1)])
+        iterated_options.setdefault("gaussian_sigma", [SSBM_kwargs.pop("gaussian_sigma", 0.1)])
 
         # Make sure to have lists:
         for iter_key in iterated_options:
@@ -243,15 +283,15 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         # Load the data:
         for _ in range(nb_iterations):
             n = SSBM_kwargs.get("n")
-            k = SSBM_kwargs.get("k")
-            for p in iterated_options['p']:
-                for eta in iterated_options['eta']:
+            for pin in iterated_options['pin']:
+                for etain in iterated_options['etain']:
                     for gauss_sigma in iterated_options['gaussian_sigma']:
                         print("Creating SSBM model...")
 
 
-                        (A_p, A_n), GT_labels = block_models.SSBM(n=n, k=k, pin=p, etain=eta, values='gaussian',
-                                                                 guassian_sigma=gauss_sigma)
+                        (A_p, A_n), GT_labels = block_models.SSBM(pin=pin, etain=etain,
+                                                                 guassian_sigma=gauss_sigma,
+                                                                  **SSBM_kwargs)
 
                         # Symmetrize matrices:
                         # why was this necessary at all...?
@@ -285,9 +325,9 @@ class SSBMPostProcessingExperiment(BaseExperiment):
                                 'GT_labels': GT_labels,
                                 'A_p': A_p,
                                 'A_n': A_n,
-                                'eta': eta,
+                                'etain': etain,
                                 'gauss_sigma': gauss_sigma,
-                                'p': p,
+                                'pin': pin,
                                 'signed_edge_weights': signed_edge_weights,
                                 'graph': graph,
                                 'uv_ids': uv_ids
@@ -302,7 +342,8 @@ class SSBMPostProcessingExperiment(BaseExperiment):
                             sub_dirs=('scores', 'out_segms'),
                             file_extensions=('.yml', '.h5'),
                             filename_postfix=None,
-                            overwrite_previous=False):
+                            overwrite_previous=False,
+                            subdir=None):
         """
         This function takes care of creating a valid names for the output config/score and segmentation files.
 
@@ -318,6 +359,10 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         the parameter `strings_to_include_in_filenames`
         """
         experiment_dir = self.get("exp_path")
+
+        if subdir is not None:
+            experiment_dir = os.path.join(experiment_dir, subdir)
+            segm_utils.check_dir_and_create(experiment_dir)
 
         # Compose output file name:
         filename = ""
@@ -345,7 +390,8 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         return out_file_paths
 
     def apply_presets_to_postproc_config(self,
-                            list_of_presets_to_be_applied=None):
+                            list_of_presets_to_be_applied=None,
+                                         debug=False):
         # Get all presets:
         post_proc_config = deepcopy(self.get("postproc_config"))
         presets_collected = [] if list_of_presets_to_be_applied is None else list_of_presets_to_be_applied
@@ -359,7 +405,7 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         adapted_config = adapt_configs_to_model_v2(presets_collected,
                                   config={"postproc": post_proc_config},
                                   all_presets=self.get("postproc_presets"),
-                                  debug=True)
+                                  debug=debug)
         return adapted_config["postproc"], presets_collected
 
 
@@ -367,7 +413,7 @@ if __name__ == '__main__':
     print(sys.argv[1])
 
     source_path = os.path.dirname(os.path.realpath(__file__))
-    config_path = os.path.join(source_path, 'postproc_configs')
+    config_path = os.path.join(source_path, '../../experiments/cremi/postproc_compare/postproc_configs')
     experiments_path = os.path.join(source_path, 'runs')
 
     path_types = ["DATA_HOME", "LOCAL_DRIVE"]

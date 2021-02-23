@@ -16,7 +16,7 @@ from segmfriends.utils.config_utils import collect_score_configs
 project_dir = os.path.join(get_trendytukan_drive_dir(), "projects/new_agglo_compare")
 
 EXP_NAMES = [
-    "subcrop_train_samples_LR01_c",
+    "subcrop_train_samples_SP_LR0_full",
 ]
 
 REQUIRED_STRINGS = [
@@ -160,11 +160,13 @@ else:
     export_dir = os.path.join(project_dir, "collected_scores")
 check_dir_and_create(export_dir)
 # print(collected_results)
+write_path = os.path.join(export_dir, "summarized_{}{}.csv".format(ID, POSTFIX_FILE))
+print(write_path)
 if LATEX_OUTPUT:
-    np.savetxt(os.path.join(export_dir, "summarized_{}{}.csv".format(ID, POSTFIX_FILE)), collected_results, delimiter=' & ',
+    np.savetxt(write_path, collected_results, delimiter=' & ',
            fmt='%s',
            newline=' \\\\\n')
 else:
-    np.savetxt(os.path.join(export_dir, "summarized_{}{}.csv".format(ID, POSTFIX_FILE)), collected_results, delimiter=',',
+    np.savetxt(write_path, collected_results, delimiter=',',
                fmt='%s',
                newline=' \n')

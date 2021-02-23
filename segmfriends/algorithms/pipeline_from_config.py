@@ -103,9 +103,7 @@ def get_segmentation_pipeline(
 
     elif segm_pipeline_type == 'MWS':
         segm_pipeline = MutexWatershed(offsets,
-                                     # min_segment_size=10,
                                      invert_affinities=invert_affinities,
-                                   n_threads=nb_threads,
                                    **MWS_kwargs)
     else:
         raise NotImplementedError("The passed segmentation pipeline type was not recognised: {}".format(segm_pipeline_type))

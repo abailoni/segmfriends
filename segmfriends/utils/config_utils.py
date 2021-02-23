@@ -2,6 +2,7 @@ from .various import yaml2dict
 from copy import deepcopy
 import os
 import yaml
+import numpy as np
 
 def recursive_dict_update(source, target, zero_depth=True):
     # if zero_depth:
@@ -268,14 +269,16 @@ def collect_score_configs(scores_path,
                 key = key if isinstance(key, (list, tuple)) else [key]
                 key_value = return_recursive_key_in_dict(config_dict, key)
                 assert not isinstance(key_value, dict), "Key in the dictionary was not fully specified"
-                key_value = key_value[0] if isinstance(key_value, (tuple, list)) else key_value
+                if isinstance(key_value, (tuple, list)):
+                    assert len(key_value) == 1, "Cannot select a list from the config file"
+                    key_value = key_value[0]
                 current_dict[key_value] = {}
                 current_dict = current_dict[key_value]
 
             if score_files_have_IDs:
                 ID = filename.replace(".yml", "").split("__")[-1]
             else:
-                ID = "0"
+                ID = str(np.random.randint(1000000000))
             current_dict[ID] = config_dict
 
             results_collected = recursive_dict_update(new_results, results_collected)

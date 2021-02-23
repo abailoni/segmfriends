@@ -7,7 +7,8 @@ except ImportError:
 def add_opensimplex_noise_to_affs(affinities, scale_factor,
                             mod='merge-biased',
                             target_affs='all',
-                            seed=None
+                            seed=None,
+                            number_of_threads=-1
                             ):
     assert generate_opensimplex_noise is not None, "Opensimplex noise is needed for this function"
     affinities = affinities.copy()
@@ -39,11 +40,11 @@ def add_opensimplex_noise_to_affs(affinities, scale_factor,
     # Generate noise:
     shape = affinities[noise_slc].shape
 
-    large_ft_size = np.array((1., 3., 50., 50.))
-    large_scale_noise = (generate_opensimplex_noise(shape, seed=seed, features_size=large_ft_size, number_of_threads=8)
+    large_ft_size = np.array((17., 3., 50., 50.))
+    large_scale_noise = (generate_opensimplex_noise(shape, seed=seed, features_size=large_ft_size, number_of_threads=number_of_threads)
                          +1.0) / 2.0
-    fine_ft_size = np.array((1., 3., 20., 20.))
-    fine_scale_noise = (generate_opensimplex_noise(shape, seed=seed, features_size=fine_ft_size, number_of_threads=8)
+    fine_ft_size = np.array((17., 3., 20., 20.))
+    fine_scale_noise = (generate_opensimplex_noise(shape, seed=seed, features_size=fine_ft_size, number_of_threads=number_of_threads)
                         + 1.0) / 2.0
 
     # Combine large and fine features:

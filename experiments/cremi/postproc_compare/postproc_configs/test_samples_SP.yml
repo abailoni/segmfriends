@@ -1,0 +1,31 @@
+experiment_name: test_samples_SP
+
+postproc_config:
+#  TODO: crop, linkage, samples
+  from_superpixels: True
+
+  prepare_submission: True
+
+  nb_thread_pools: 1
+  restrict_to_GT_bbox: True
+  compute_scores: False
+
+
+  iterated_options:
+    preset: ["MEAN", "MEANconstr"] # Presets to be found in the presets folder
+#    preset: ["MEANconstr"] # Presets to be found in the presets folder
+    # TODO: The following options modify things at loading time, so they need to be handled specifically:
+    sample: [ "B+"]
+#    sample: ["A+", "B+", "C+"]
+    edge_prob: 0.
+    noise_factor: 0.
+    crop_slice: ":,:, :, :"
+#      - ":,:34"
+#      - ":,30:66"
+#      - ":,62:98"
+#      - ":,94:"
+    sub_crop_slice: ":,:, :, :"
+
+  WSDT_kwargs:
+    intersect_with_boundary_pixels: False
+

@@ -15,7 +15,7 @@ postproc_config:
 
   GASP_kwargs:
     return_extra_outputs: True
-    set_only_direct_neigh_as_mergeable: True
+    set_only_direct_neigh_as_mergeable: False
     run_GASP_kwargs:
       export_agglomeration_data: False
 
@@ -23,7 +23,7 @@ postproc_config:
 
   iterated_options:
 #    preset: ["MEAN", "Mutex_constr", "MEANconstr", "SUM", "SUMconstr"] # Presets to be found in the presets folder
-    preset: ["Mutex_constr", "Mutex", "MutexEfficient"] # Presets to be found in the presets folder
+    preset: ["MutexEffOnGrid", "Mutex_constr", "Mutex", "MutexEfficient"] # Presets to be found in the presets folder
 #    preset: ["MutexEfficient", "Mutex", "Mutex_constr"] # Presets to be found in the presets folder
     sample: [ "B"]
     edge_prob: 1.

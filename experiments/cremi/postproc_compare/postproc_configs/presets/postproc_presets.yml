@@ -1,4 +1,17 @@
-# TODO: delete, most of this is crap and should be updated
+
+MutexPixGridEff:
+  postproc:
+    segm_pipeline_type: 'MWS'
+    from_superpixels: False
+    MWS_kwargs:
+      beta_bias: 0.5
+
+
+
+#---------------------------
+# GASP pipelines
+#---------------------------
+
 
 GASP:
 #  parent_model: ['simple_WSDT']
@@ -12,6 +25,27 @@ MEAN:
         run_GASP_kwargs:
           linkage_criteria: 'mean'
           add_cannot_link_constraints: False
+
+MAX:
+  parent_model: ['GASP']
+  postproc:
+    GASP_kwargs:
+        run_GASP_kwargs:
+          linkage_criteria: 'max'
+          add_cannot_link_constraints: False
+          merge_constrained_edges_at_the_end: False
+          use_efficient_implementations: True
+
+MIN:
+  parent_model: ['GASP']
+  postproc:
+    GASP_kwargs:
+        run_GASP_kwargs:
+          linkage_criteria: 'min'
+          add_cannot_link_constraints: False
+          merge_constrained_edges_at_the_end: False
+
+
 
 MAXconstr:
   parent_model: ['GASP']
@@ -35,7 +69,7 @@ SUM:
   parent_model: ['GASP']
   postproc:
     GASP_kwargs:
-      use_logarithmic_weights: True
+#      use_logarithmic_weights: True
       run_GASP_kwargs:
         linkage_criteria: 'sum'
         add_cannot_link_constraints: False
@@ -44,11 +78,33 @@ SUMconstr:
   parent_model: ['GASP']
   postproc:
     GASP_kwargs:
-      use_logarithmic_weights: True
+#      use_logarithmic_weights: True
       run_GASP_kwargs:
         linkage_criteria: 'sum'
         add_cannot_link_constraints: True
         merge_constrained_edges_at_the_end: True
+
+
+SUMwithLogs:
+  parent_model: ["SUM"]
+  postproc:
+    GASP_kwargs:
+      use_logarithmic_weights: True
+
+MEANwithLogs:
+  parent_model: ["MEAN"]
+  postproc:
+    GASP_kwargs:
+      use_logarithmic_weights: True
+
+
+SUMconstrWithLogs:
+  parent_model: ["SUMconstr"]
+  postproc:
+    GASP_kwargs:
+      use_logarithmic_weights: True
+
+
 
 Mutex:
   parent_model: ['GASP']
@@ -71,7 +127,7 @@ Mutex_constr:
           use_efficient_implementations: False
 
 
-MutexEfficient:
+MutexGraphEff:
   parent_model: ['GASP']
   postproc:
     GASP_kwargs:

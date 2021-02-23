@@ -78,6 +78,7 @@ class WatershedOnDistanceTransform(object):
         return segmentation, seg_max
 
     def __call__(self, affinities):
+        affinities = np.require(affinities, dtype='float32')
         if self.stacked_2d:
             # take the max over inplane nearest affinity channels
             if self.from_boundary_maps:
@@ -193,15 +194,11 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
             boundary_pixels_kwargs = boundary_pixels_kwargs if boundary_pixels_kwargs is not None else {}
             self.intersect = IntersectWithBoundaryPixels(offsets, **boundary_pixels_kwargs)
 
-    def __call__(self, *inputs):
+    def __call__(self, affinities, foreground_mask=None):
         """
         Here we expect real affinities (1: merge, 0: split).
         If the opposite is passed, set option `invert_affinities == True`
         """
-        assert len(inputs) == 1 or len(inputs) == 2, len(inputs)
-        affinities = inputs[0]
-        foreground_mask = inputs[1] if len(inputs) == 2 else None
-
         assert affinities.shape[0] == len(self.offsets), "{}, {}".format(affinities.shape[0], len(self.offsets))
         assert affinities.ndim == 4, "{}".format(affinities.ndim)
 
@@ -228,7 +225,7 @@ class WatershedOnDistanceTransformFromAffinities(WatershedOnDistanceTransform):
             segmentation = np.where(foreground_mask, segmentation, np.ones_like(segmentation)*(-1))
 
         if segmentation.max() > np.uint32(-1):
-            print("!!!!!!!!!WARNING!!!!!!!!!! uint32 limit reached!")
+            print("!!WARNING!! uint32 limit reached!")
 
 
         # from ... import vis as vis

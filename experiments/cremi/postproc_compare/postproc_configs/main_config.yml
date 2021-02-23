@@ -34,13 +34,28 @@ offsets_dir_path: '$DATA_HOME/pyCharm_projects/segmfriends/experiments/cremi/pos
 
 # 1) You can specify the path manually:
 affinities:
-  inner_path: 'predictions/full_affs'
-  dtype: float32
+  inner_path:
+    A: 'predictions/full_affs'
+    B: 'predictions/full_affs'
+    C: 'predictions/full_affs'
+    A+: "affinities"
+    B+: "affinities"
+    C+: "affinities"
+  dtype:
+    A: float32
+    B: float32
+    C: float32
+    A+: uint8
+    B+: uint8
+    C+: uint8
   # In case you don't want to specify it manually, comment out the following lines and look at the next options:
   path:
     A: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleA_train.h5"
     B: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
     C: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleC_train.h5"
+    A+: "$LOCAL_DRIVE/datasets/CREMI/constantin_affs/test_samples/sampleA+_cropped_plus_mask.h5"
+    B+: "$LOCAL_DRIVE/datasets/CREMI/constantin_affs/test_samples/sampleB+_cropped_plus_mask.h5"
+    C+: "$LOCAL_DRIVE/datasets/CREMI/constantin_affs/test_samples/sampleC+_cropped_plus_mask.h5"
 
 # 2) If the previous `path` option is not given, the script can get the affinities from
 # a sub-directory of `main_output_dir`:
@@ -63,19 +78,26 @@ volume_config:
       A: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleA_train.h5"
       B: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
       C: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleC_train.h5"
+      A+: "$LOCAL_DRIVE/datasets/CREMI/constantin_affs/test_samples/sampleA+_cropped_plus_mask.h5"
+      B+: "$LOCAL_DRIVE/datasets/CREMI/constantin_affs/test_samples/sampleB+_cropped_plus_mask.h5"
+      C+: "$LOCAL_DRIVE/datasets/CREMI/constantin_affs/test_samples/sampleC+_cropped_plus_mask.h5"
     inner_path:
       A: "segmentations/groundtruth_fixed"
       B: "segmentations/groundtruth_fixed_OLD"
       C: "segmentations/groundtruth_fixed"
+      A+: "volumes/labels/mask"
+      B+: "volumes/labels/mask"
+      C+: "volumes/labels/mask"
     dtype: int32
     ds_order: 1
     #crop_slice: ":,:,:"
 
+
   # These files will be necessary to re-align the predictions and submit them to the CREMI website:
   paths_padded_boxes:
-    A+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleA+_cropped_no_crop.csv'
-    B+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleB+_cropped_no_crop.csv'
-    C+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleC+_cropped_no_crop.csv'
+    A+: '$LOCAL_DRIVE/datasets/CREMI/constantin_affs/test_samples/sampleA+_crop.csv'
+    B+: '$LOCAL_DRIVE/datasets/CREMI/constantin_affs/test_samples/sampleB+_crop.csv'
+    C+: '$LOCAL_DRIVE/datasets/CREMI/constantin_affs/test_samples/sampleC+_crop.csv'
 
 
 
@@ -248,11 +270,7 @@ postproc_config:
 
   # Options for Mutex wathershed pipeline starting from pixel grid graph:
   MWS_kwargs:
-    randomize_bounds: True
-    stride:
-      - 1
-      - 6
-      - 6
+    beta_bias: 0.5
 
   # Options for the multicut pipeline:
   multicut_kwargs:

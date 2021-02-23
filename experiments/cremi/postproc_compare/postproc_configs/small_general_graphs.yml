@@ -1,0 +1,14 @@
+#restrict_data_to: "fruitfly-large"
+data_to_be_ignored:
+  - "fruitfly-large"
+#  - "fruitfly-medium"
+
+
+postproc_config:
+  iterated_options:
+#    preset: ["MutexGraphEff", "MAX", "MIN"] # Presets to be found in the presets folder#
+    preset: ["MEANconstr", "SUMconstr", "MAXconstr"] # Presets to be found in the presets folder#
+
+  nb_thread_pools: 2
+
+

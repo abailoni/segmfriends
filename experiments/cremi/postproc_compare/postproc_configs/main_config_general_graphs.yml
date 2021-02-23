@@ -5,11 +5,19 @@
 #### MAIN EXPERIMENT FOLDER ####
 # This path defines the main directory where all the experiments
 #  you will run will be saved (including data like scores and output segmentation files)
-main_output_dir: "$LOCAL_DRIVE/projects/new_agglo_compare_SSBM"
+main_output_dir: "$LOCAL_DRIVE/projects/new_agglo_compare_general_graphs"
+
+
+general_graphs_datasets_root_dir: "$LOCAL_DRIVE/datasets/signed_graphs_reorganized"
+#restrict_data_to: "knott"
+#restrict_data_to: "fruitfly-large"
+#data_to_be_ignored:
+#  - "fruitfly-large"
+#  - "fruitfly-medium"
 
 # Now let's define the name of the current experiment (a folder with this name will be created in main_output_dir,
 # if not existing already):
-experiment_name: my_first_SSBM_postproc_experiment
+experiment_name: compare_energies
 # -----------------------------------
 
 
@@ -43,26 +51,14 @@ postproc_config:
   # configs files with those names defined in the presets folder) and three CREMI samples, in total we will get 9 runs.
 
   iterated_options:
-    preset: ["MEAN", "SUM"] # Presets to be found in the presets folder
+#    preset: ["MEAN", "SUM"] # Presets to be found in the presets folder
+    preset: ["MEANconstr", "SUMconstr", "MutexGraphEff", "MAXconstr", "MAX", "MIN"] # Presets to be found in the presets folder
 
   # How many segmentation pipelines to run at the same time:
   nb_thread_pools: 1
 
   # We could want to run the same setup multiple times (for example to collect statistics about noise/randomness etc)
   nb_iterations: 1
-
-  # Available options: "SPONGE", "SPONGE-sym", "BNC", "L-sym"
-  spectral_method_name: "SPONGE-sym"
-
-
-  SSBM_kwargs:
-    n: 100000 # 100000
-    k: 100 # 100
-    pin: 0.1
-    gaussian_sigma: 0.1
-    etaout: 0.
-    etain: 0.3
-    values: 'gaussian'
 
 
   # ------------------------------
@@ -81,7 +77,7 @@ postproc_config:
   # In order to make the names of the saved files more readable, the name will include some things by default like the
   # segm_pipeline_type, the CREMI sample, and the selected presets.
   # On top of those, you can also manually define a custom "postfix" string to append to the filenames:
-  filename_postfix: "myCustomPostfix"
+#  filename_postfix: "myCustomPostfix"
 
 
   # ------------------------------

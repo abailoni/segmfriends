@@ -1,7 +1,52 @@
-from affogato.segmentation import compute_mws_segmentation
+try:
+    from affogato.segmentation import compute_mws_segmentation, compute_mws_segmentation_from_affinities
+except ImportError:
+    compute_mws_segmentation_from_affinities = None
+import vigra
 
 
 class MutexWatershed(object):
+    def __init__(self, offsets,
+                 beta_bias=0.5, # 0.0: merge everything; 1.0: split everything, or what can be split
+                 invert_affinities=False,
+                 run_connected_components_on_final_segmentation=False):
+        self.beta_bias = beta_bias
+        assert isinstance(offsets, list)
+        self.offsets = offsets
+        self.dim = len(offsets[0])
+        self.invert_affinities = invert_affinities
+        self.run_connected_components_on_final_segmentation = run_connected_components_on_final_segmentation
+
+    def __call__(self, affinities, foreground_mask=None, mask_used_edges=None):
+        assert compute_mws_segmentation_from_affinities is not None, "Please update your version of affogato"
+        if self.invert_affinities:
+            affinities = 1. - affinities
+
+        segmentation = compute_mws_segmentation_from_affinities(affinities,
+                                                                self.offsets,
+                                                                beta_parameter=self.beta_bias,
+                                                                foreground_mask=foreground_mask,
+                                                                edge_mask=mask_used_edges)
+
+        if self.run_connected_components_on_final_segmentation:
+            if segmentation.ndim == 3:
+                if foreground_mask is None:
+                    segmentation = vigra.analysis.labelVolume(segmentation.astype('uint32'))
+                else:
+                    segmentation = vigra.analysis.labelVolumeWithBackground(segmentation.astype('uint32'))
+            elif segmentation.nidm == 2:
+                if foreground_mask is None:
+                    segmentation = vigra.analysis.labelImage(segmentation.astype('uint32'))
+                else:
+                    segmentation = vigra.analysis.labelImageWithBackground(segmentation.astype('uint32'))
+            else:
+                raise NotImplementedError("Connected components implemented only for 2D or 3D segmentations")
+
+        return segmentation
+
+
+
+class MutexWatershedOld(object):
     def __init__(self, offsets, stride,
                  seperating_channel=3, invert_dam_channels=True,
                  randomize_bounds=False,

@@ -1,0 +1,37 @@
+experiment_name: SSBM_export_data
+# -----------------------------------
+
+
+postproc_config:
+  iterated_options:
+    preset: ["MEAN", "Mutex", "SUM"] # Presets to be found in the presets folder
+
+  # How many segmentation pipelines to run at the same time:
+  nb_thread_pools: 1
+
+  # We could want to run the same setup multiple times (for example to collect statistics about noise/randomness etc)
+  nb_iterations: 1
+
+  # Available options: "SPONGE", "SPONGE-sym", "BNC", "L-sym"
+  spectral_method_name: "SPONGE-sym"
+
+  SSBM_kwargs:
+    n: 2500 # 100000
+    k: 2 # 100
+    pin: 1.0
+    pout: 1.0
+    gaussian_sigma: 0.1
+    etaout: 0.2
+    etain: 0.2
+    values: 'gaussian'
+
+
+  save_agglomeration_data: True
+  overwrite_prev_files: True
+
+  GASP_kwargs:
+    return_extra_outputs: True
+    run_GASP_kwargs:
+      export_agglomeration_data: True
+
+  filename_postfix: "exported_data"

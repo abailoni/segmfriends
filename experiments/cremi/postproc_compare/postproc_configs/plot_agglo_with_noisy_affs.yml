@@ -1,0 +1,40 @@
+experiment_name: plot_agglo_with_noisy_affs
+
+postproc_config:
+#  TODO: subcrop, name, noise, iterations, preset
+  from_superpixels: False
+  noise_mod: "merge-biased" # 'merge-biased', "split-biased", "unbiased
+  save_segm: False
+
+  nb_thread_pools: 1
+  nb_iterations: 2
+
+  overwrite_prev_files: True
+
+  save_agglomeration_data: True
+  WS_growing: False
+
+  connected_components_on_final_segm: False
+
+  GASP_kwargs:
+    return_extra_outputs: True
+    set_only_direct_neigh_as_mergeable: True
+    run_GASP_kwargs:
+      export_agglomeration_data: True
+
+
+  iterated_options:
+    preset: ["MEAN", "Mutex", "SUM", "MEANconstr", "SUMconstr"] # Presets to be found in the presets folder
+#    preset: ["MEAN"] # Presets to be found in the presets folder
+    sample: [ "B"]
+    edge_prob: 1.
+#    noise_factor: 3.
+    noise_factor: [2.]
+    crop_slice:
+      B:
+        - ":, 21:22, 400:500, 700:800"
+
+#    sub_crop_slice: ":,:2, 200:300, 200:300"
+    sub_crop_slice: ":,:,:,:"
+
+
