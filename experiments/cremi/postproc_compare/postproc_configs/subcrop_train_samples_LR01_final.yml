@@ -1,0 +1,53 @@
+experiment_name: subcrop_train_samples_LR01_final_2
+
+postproc_config:
+#  TODO: sample,  subcrop, crop, name , preset
+  from_superpixels: False
+
+  nb_thread_pools: 5
+  restrict_to_GT_bbox: True
+
+  iterated_options:
+#    preset: ["MEAN", "MEANconstr", "SUM", "SUMconstr", "Mutex"] # Presets to be found in the presets folder
+#    preset: ["MutexPixGrid", "MEAN"] # Presets to be found in the presets folder
+    preset:
+      - "MEAN"
+      - "MEANconstr"
+      - "SUM"
+      - "SUMconstr"
+      - "MutexPixGrid"
+      - "MAX"
+      - "MAXconstr"
+      - "MIN"
+      - "MINconstr"
+#    sample: [ "A"]
+    sample: ["B", "A", "C"]
+    edge_prob: 0.1
+    noise_factor: 0.
+#    crop_slice: ":,100:"
+    crop_slice:
+      A:
+        - ":,:25"
+        - ":,25:50"
+        - ":,50:75"
+        - ":,75:100"
+        - ":,100:"
+      B:
+        - ":,:25, 90:, 580: 1900"
+        - ":,25:50, 90:, 580: 1900"
+        - ":,50:75, 90:, 580: 1900"
+        - ":,75:100, 90:, 580: 1900"
+        - ":,100:, 90:, 580: 1900"
+      C:
+        - ":,:25, 70:1450, 95:1425"
+        - ":,25:50, 70:1450, 95:1425"
+        - ":,50:75, 70:1450, 95:1425"
+        - ":,75:100, 70:1450, 95:1425"
+        - ":,100:, 70:1450, 95:1425"
+
+#    sub_crop_slice: ":,:, 200:250, 200:250"
+    sub_crop_slice: ":,:,:,:"
+
+  WSDT_kwargs:
+    intersect_with_boundary_pixels: False
+

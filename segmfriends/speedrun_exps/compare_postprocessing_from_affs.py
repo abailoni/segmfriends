@@ -279,6 +279,11 @@ class PostProcessingExperiment(BaseExperiment):
         config_to_save["postproc_config"]["edge_prob"] = edge_prob
         config_to_save["postproc_config"]['noise_factor'] = noise_factor
 
+        if "graph" in out_dict:
+            graph = out_dict["graph"]
+            config_to_save["postproc_config"]['nb_nodes'] = graph.numberOfNodes
+            config_to_save["postproc_config"]['nb_edges'] = graph.numberOfEdges
+
         # Restrict to GT box:
         if restrict_to_GT_bbox:
             # TODO: Check that this should not be necessary. Background label is already zero (also for WS)

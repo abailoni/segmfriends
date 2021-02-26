@@ -11,8 +11,8 @@ main_output_dir: "$LOCAL_DRIVE/projects/new_agglo_compare_general_graphs"
 general_graphs_datasets_root_dir: "$LOCAL_DRIVE/datasets/signed_graphs_reorganized"
 #restrict_data_to: "knott"
 #restrict_data_to: "fruitfly-large"
-#data_to_be_ignored:
-#  - "fruitfly-large"
+data_to_be_ignored:
+  - "fruitfly-large"
 #  - "fruitfly-medium"
 
 # Now let's define the name of the current experiment (a folder with this name will be created in main_output_dir,
@@ -25,7 +25,7 @@ postproc_config:
   # ------------------------------
   # General options
   # ------------------------------
-  nb_threads: 6
+  nb_threads: 1
 
   # ------------------------------
   # RUNNING MULTIPLE PIPELINES AT THE SAME TIME:
@@ -52,7 +52,8 @@ postproc_config:
 
   iterated_options:
 #    preset: ["MEAN", "SUM"] # Presets to be found in the presets folder
-    preset: ["MEANconstr", "SUMconstr", "MutexGraphEff", "MAXconstr", "MAX", "MIN"] # Presets to be found in the presets folder
+#    preset: ["MEANconstr", "SUMconstr", "MutexGraphEff", "MAXconstr", "MAX", "MIN"] # Presets to be found in the presets folder
+    preset: ["MINconstr"] # Presets to be found in the presets folder
 
   # How many segmentation pipelines to run at the same time:
   nb_thread_pools: 1

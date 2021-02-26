@@ -1,10 +1,15 @@
 
-MutexPixGridEff:
+MutexPixGrid:
   postproc:
-    segm_pipeline_type: 'MWS'
+    segm_pipeline_type: 'GASP'
     from_superpixels: False
-    MWS_kwargs:
-      beta_bias: 0.5
+    connected_components_on_final_segm: True
+    GASP_kwargs:
+      set_only_direct_neigh_as_mergeable: False
+      run_GASP_kwargs:
+        linkage_criteria: 'mutex_watershed'
+        export_agglomeration_data: False
+        use_efficient_implementations: True
 
 
 
@@ -29,12 +34,13 @@ MEAN:
 MAX:
   parent_model: ['GASP']
   postproc:
+    connected_components_on_final_segm: True
     GASP_kwargs:
-        run_GASP_kwargs:
-          linkage_criteria: 'max'
-          add_cannot_link_constraints: False
-          merge_constrained_edges_at_the_end: False
-          use_efficient_implementations: True
+      run_GASP_kwargs:
+        linkage_criteria: 'max'
+        add_cannot_link_constraints: False
+        merge_constrained_edges_at_the_end: False
+        use_efficient_implementations: True
 
 MIN:
   parent_model: ['GASP']
@@ -46,6 +52,14 @@ MIN:
           merge_constrained_edges_at_the_end: False
 
 
+MINconstr:
+  parent_model: ['GASP']
+  postproc:
+    GASP_kwargs:
+        run_GASP_kwargs:
+          linkage_criteria: 'min'
+          add_cannot_link_constraints: True
+          merge_constrained_edges_at_the_end: True
 
 MAXconstr:
   parent_model: ['GASP']
