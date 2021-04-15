@@ -12,10 +12,10 @@ from segmfriends.utils.various import yaml2dict
 # Script options:
 # -----------------------
 
-project_dir = os.path.join(get_trendytukan_drive_dir(), "projects/new_agglo_compare")
+project_dir = os.path.join(get_trendytukan_drive_dir(), "Desktop/ssbm_experiments/")
 
 EXP_NAMES = [
-    "subcrop_train_samples_LR1",
+    "k_statistics_pin01pout00001eta001_gaussian_n100000",
 ]
 
 REQUIRED_STRINGS = [
@@ -35,12 +35,12 @@ EXCLUDE_STRINGS = [
 INCLUDE_STRINGS = [
 ]
 
-POSTFIX_FILE = "_MEAN_and_MWS"
+POSTFIX_FILE = "stat"
 
 LATEX_OUTPUT = False
 
 # Index of the sorting column (ignoring the first columns given by exp-name and name of the score file
-sorting_column_idx = 3
+sorting_column_idx = 0
 
 INCLUDE_EXP_NAME = False
 INCLUDE_SCORE_FILENAME = False
@@ -53,16 +53,13 @@ INCLUDE_SCORE_FILENAME = False
 #   - type of the data (how to print it in the table
 #   - number of floating digits (optional)
 keys_to_collect = [
-    (['postproc_config', 'sample'], 'string'),
-    (['postproc_config', 'crop'], 'string'),
-    (['postproc_config', 'presets_collected'], 'string'),
-    (['score_WS', 'cremi-score'], 'f', 3),
-    (['score_WS', 'adapted-rand'], 'f', 3),
-    (['score_WS', 'vi-merge'], 'f', 3),
-    (['score_WS', 'vi-split'], 'f', 3),
-    (['run_GASP_runtime'], 'f', 1),
-    (['full_GASP_pipeline_runtime'], 'f', 1),
-    (['multicut_energy'], 'f', 0),
+    (['postproc_config', 'GASP_kwargs', 'run_GASP_kwargs', 'linkage_criteria'], 'string'),
+    (['postproc_config', 'SSBM_kwargs', 'k'], 'string'),
+    (['scores', 'cremi-score'], 'f', 3),
+    (['scores', 'adapted-rand'], 'f', 3),
+    (['scores', 'vi-merge'], 'f', 3),
+    (['scores', 'vi-split'], 'f', 3),
+    (['runtime'], 'f', 3),
 ]
 
 
@@ -149,7 +146,6 @@ for exp_name in EXP_NAMES:
                 new_table_entrance += ["" for _ in range(cols_to_add)]
 
             for j, key in enumerate(keys_to_collect):
-                # print(result_file)
                 cell_value = return_recursive_key_in_dict(config, key[0])
                 if key[1] == 'string':
                     new_table_entrance.append("{0}".format(cell_value))
@@ -198,3 +194,5 @@ else:
     np.savetxt(os.path.join(export_dir, "collected_{}{}.csv".format(ID, POSTFIX_FILE)), collected_results, delimiter='\t',
                fmt='%s',
                newline=' \n')
+
+print(os.path.join(export_dir, "collected_{}{}.csv".format(ID, POSTFIX_FILE)))

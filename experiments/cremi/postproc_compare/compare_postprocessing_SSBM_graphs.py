@@ -120,7 +120,9 @@ class SSBMPostProcessingExperiment(BaseExperiment):
 
     def run_method_on_graph(self, preset,
                             GT_labels,
-                            p=None,
+                            pin=None,
+                            pout=None,
+                            k=None,
                             signed_edge_weights=None,
                             graph=None,
                             uv_ids=None,
@@ -137,7 +139,7 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         print(preset)
         if segm_pipeline_type == "GASP":
             run_GASP_kwargs = post_proc_config.get("GASP_kwargs").get("run_GASP_kwargs")
-            node_labels, _ = run_GASP(graph, signed_edge_weights,
+            node_labels, _ , out_dict = run_GASP(graph, signed_edge_weights, export_agglomeration_data = True,
                                       **run_GASP_kwargs)
         elif segm_pipeline_type == "spectral":
             c = signet_cluster.Cluster((A_p, A_n))
@@ -178,10 +180,11 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         print(runtime, ARAND_score, scores)
 
 
+
         # ------------------------------
         # SAVING RESULTS:
         # ------------------------------
-        strings_to_include_in_filenames = [segm_pipeline_type] + [preset]
+        strings_to_include_in_filenames = [preset] + [k] + [eta]
         config_file_path, _ = \
             self.get_valid_out_paths(strings_to_include_in_filenames,
                                      overwrite_previous=post_proc_config.get("overwrite_prev_files", False),
@@ -197,8 +200,9 @@ class SSBMPostProcessingExperiment(BaseExperiment):
 
         # Save configuration of the iterated kwargs:
         config_to_save["postproc_config"]["SSBM_kwargs"]["eta"] = eta
-        config_to_save["postproc_config"]["SSBM_kwargs"]["p"] = p
-        config_to_save["postproc_config"]["SSBM_kwargs"]["gauss_sigma"] = gauss_sigma
+        config_to_save["postproc_config"]["SSBM_kwargs"]["pin"] = pin
+        config_to_save["postproc_config"]["SSBM_kwargs"]["pout"] = pout
+        config_to_save["postproc_config"]["SSBM_kwargs"]["k"] = k
 
         # Include scores in config:
         config_to_save["runtime"] = runtime
@@ -206,6 +210,9 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         config_to_save['scores'] = scores
         config_to_save["nb_clusters"] = int(nb_clusters)
         config_to_save["biggest_clusters"] = [int(size) for size in biggest_clusters]
+        config_to_save["final_node_data"] = out_dict['agglomeration_data'][0].tolist()
+        #config_to_save["final_edge_data"] = out_dict['agglomeration_data'][1].tolist()
+        config_to_save["action_data"] = out_dict['agglomeration_data'][2].tolist()
 
         with open(config_file_path, 'w') as f:
             json.dump(config_to_save, f, indent=4, sort_keys=True)
@@ -225,8 +232,9 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         # Initialize default iterated options:
         iterated_options.setdefault("preset", [postproc_config.get("preset", None)])
         iterated_options.setdefault("eta", [SSBM_kwargs.get("eta", 0.1)])
-        iterated_options.setdefault("p", [SSBM_kwargs.get("p", 0.1)])
-        iterated_options.setdefault("gaussian_sigma", [SSBM_kwargs.get("gaussian_sigma", 0.1)])
+        iterated_options.setdefault("pin", [SSBM_kwargs.get("pin", 0.1)])
+        iterated_options.setdefault("pout", [SSBM_kwargs.get("pout", 0.1)])
+        iterated_options.setdefault("k", [SSBM_kwargs.get("k", 2)])
 
         # Make sure to have lists:
         for iter_key in iterated_options:
@@ -243,56 +251,58 @@ class SSBMPostProcessingExperiment(BaseExperiment):
         # Load the data:
         for _ in range(nb_iterations):
             n = SSBM_kwargs.get("n")
-            k = SSBM_kwargs.get("k")
-            for p in iterated_options['p']:
-                for eta in iterated_options['eta']:
-                    for gauss_sigma in iterated_options['gaussian_sigma']:
-                        print("Creating SSBM model...")
+            gauss_sigma = SSBM_kwargs.get("gaussian_sigma")
+            for pin in iterated_options['pin']:
+                for pout in iterated_options['pout']:
+                    for eta in iterated_options['eta']:
+                        for k in iterated_options['k']:
+                            print("Creating SSBM model...")
 
 
-                        (A_p, A_n), GT_labels = block_models.SSBM(n=n, k=k, pin=p, etain=eta, values='gaussian',
-                                                                 guassian_sigma=gauss_sigma)
+                            (A_p, A_n), GT_labels = block_models.SSBM(n=n, k=k, pin=pin, etain=eta, pout=pout, values='gaussian')
 
-                        # Symmetrize matrices:
-                        # why was this necessary at all...?
-                        grid = np.indices((n, n))
-                        matrix_mask = grid[0] > grid[1]
-                        A_p = matrix_mask * A_p.toarray()
-                        A_n = matrix_mask * A_n.toarray()
-                        A_p = A_p + np.transpose(A_p)
-                        A_n = A_n + np.transpose(A_n)
-                        A_p = sparse.csr_matrix(A_p)
-                        A_n = sparse.csr_matrix(A_n)
+                            # Symmetrize matrices:
+                            # why was this necessary at all...?
+                            grid = np.indices((n, n))
+                            matrix_mask = grid[0] > grid[1]
+                            A_p = matrix_mask * A_p.toarray()
+                            A_n = matrix_mask * A_n.toarray()
+                            A_p = A_p + np.transpose(A_p)
+                            A_n = A_n + np.transpose(A_n)
+                            A_p = sparse.csr_matrix(A_p)
+                            A_n = sparse.csr_matrix(A_n)
 
-                        A_signed = A_p - A_n
-                        uv_ids, signed_edge_weights = from_adj_matrix_to_edge_list(A_signed)
+                            A_signed = A_p - A_n
+                            uv_ids, signed_edge_weights = from_adj_matrix_to_edge_list(A_signed)
 
-                        print("Building nifty graph...")
-                        graph = UndirectedGraph(n)
-                        graph.insertEdges(uv_ids)
-                        nb_edges = graph.numberOfEdges
-                        assert nb_edges == uv_ids.shape[0]
+                            print("Building nifty graph...")
+                            graph = UndirectedGraph(n)
+                            graph.insertEdges(uv_ids)
+                            nb_edges = graph.numberOfEdges
+                            assert nb_edges == uv_ids.shape[0]
 
-                        # Test connected components:
-                        from nifty.graph import components
-                        components = components(graph)
-                        components.build()
-                        print("Nb. connected components in graph:", np.unique(components.componentLabels()).shape)
+                            # Test connected components:
+                            from nifty.graph import components
+                            components = components(graph)
+                            components.build()
+                            print("Nb. connected components in graph:", np.unique(components.componentLabels()).shape)
 
-                        for preset in iterated_options['preset']:
-                            new_kwargs = {
-                                'preset': preset,
-                                'GT_labels': GT_labels,
-                                'A_p': A_p,
-                                'A_n': A_n,
-                                'eta': eta,
-                                'gauss_sigma': gauss_sigma,
-                                'p': p,
-                                'signed_edge_weights': signed_edge_weights,
-                                'graph': graph,
-                                'uv_ids': uv_ids
-                            }
-                            kwargs_collected.append(new_kwargs)
+                            for preset in iterated_options['preset']:
+                                new_kwargs = {
+                                    'preset': preset,
+                                    'GT_labels': GT_labels,
+                                    'A_p': A_p,
+                                    'A_n': A_n,
+                                    'eta': eta,
+                                    'gauss_sigma': gauss_sigma,
+                                    'pin': pin,
+                                    'pout': pout,
+                                    'k': k,
+                                    'signed_edge_weights': signed_edge_weights,
+                                    'graph': graph,
+                                    'uv_ids': uv_ids
+                                }
+                                kwargs_collected.append(new_kwargs)
 
 
         return kwargs_collected

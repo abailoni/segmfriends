@@ -1,0 +1,277 @@
+# In the following, feel free to use the path-placeholders $DATA_HOME and $LOCAL_DRIVE that will be
+# redefined as arguments at runtime (allowing better handling of dynamic paths).
+
+# -----------------------------------
+#### MAIN EXPERIMENT FOLDER ####
+# This path defines the main directory where all the experiments
+#  you will run will be saved (including data like scores and output segmentation files)
+main_output_dir: "/home/nhuetsch/Desktop/cremi_experiments/"
+
+# Now let's define the name of the current experiment (a folder with this name will be created in main_output_dir,
+# if not existing already):
+experiment_name: my_first_postproc_experiment
+# -----------------------------------
+
+
+
+# -----------------------------------
+#### OFFSETS ####
+# Load the offsets from a .json file:
+offsets_file_name: "dice_offsets.json"
+# Filename and folder are specified separately, so at runtime you can easily modify only the name of offset filename:
+offsets_dir_path: '/home/nhuetsch/Desktop/github/segmfriends/experiments/cremi/postproc_compare/offsets'
+
+# (Alternatively, you can load them directly from the infer config of the model that trained your affinities)
+# offset_path_in_infer_config: "model.config.offsets"
+# -----------------------------------
+
+
+
+# -----------------------------------
+#### AFFINITY PATH ####
+# -----------------------------------
+# There are several ways to specify the path of your affinities.
+
+# 1) You can specify the path manually:
+affinities:
+  inner_path: 'affinities_dice'
+  dtype: float32
+  # In case you don't want to specify it manually, comment out the following lines and look at the next options:
+  path:
+    #A: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleA_train.h5"
+    #B: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
+    C: '/home/nhuetsch/Desktop/Data/cremi2012/crop_maskEmb_affs_cremi_val_sample_C.h5'
+
+# 2) If the previous `path` option is not given, the script can get the affinities from
+# a sub-directory of `main_output_dir`:
+#get_affinities_from_experiment_named: name_subfolder
+# The script will look for files named `main_output_dir/get_affinities_from_experiment_named/predictions_sample_{}.h5`
+
+# 3) If this is also not given, then the script will try to get them from the folder `main_output_dir/experiment_name`
+# and look for files named `predictions_sample_{}.h5`.
+
+
+# -----------------------------------
+#### GROUND TRUTH PATH ####
+# -----------------------------------
+# TODO: skip this if not available... (Check if compute score is False)
+# For test samples, obviously only the GT mask is loaded because there is no actual GT available
+# (in this way the postprocessing can be optionally restricted to that GT mask)
+volume_config:
+  GT:
+    path:
+      #A: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleA_train.h5"
+      #B: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
+      C: '/home/nhuetsch/Desktop/Data/cremi2012/crop_maskEmb_affs_cremi_val_sample_C.h5'
+    inner_path:
+      #A: "segmentations/groundtruth_fixed"
+      #B: "segmentations/groundtruth_fixed_OLD"
+      C: 'GT'
+    dtype: int32
+    ds_order: 1
+    #crop_slice: ":,:,:"
+
+  # These files will be necessary to re-align the predictions and submit them to the CREMI website:
+  #paths_padded_boxes:
+  #  A+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleA+_cropped_no_crop.csv'
+  #  B+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleB+_cropped_no_crop.csv'
+  #  C+: '$DATA_HOME/datasets/CREMI/official_test_samples/cropped_aligned_samples/sampleC+_cropped_no_crop.csv'
+
+
+
+
+postproc_config:
+  # ------------------------------
+  # General options
+  # ------------------------------
+  nb_threads: 6
+
+  # Some algorithms could return clusters with multiple connected components in the image plane/volume
+  # (e.g. MWS (efficient implementation) with long-range attractive connections), so we may want
+  # to run connected components after the pipeline is run and before to compute the scores:
+  connected_components_on_final_segm: False
+
+  # Restrict the agglomeration only to the parts where there is available GT (i.e. GT!=0, because 0 is usually ignore label)
+  # At the moment, it is only compatible when a superpixel_generator is used.
+  restrict_to_GT_bbox: False
+
+  # If your CNN model did not predict affinities but "boundary probabilities", then set this option to true:
+  invert_affinities: False
+
+  # ------------------------------
+  # RUNNING MULTIPLE PIPELINES AT THE SAME TIME:
+  # ------------------------------
+  # In general, the following `segm_pipeline_type` parameter defines which type of pipeline should be run.
+  # The available options atm are `GASP`, `multicut`, `MWS`, and `only_superpixel_generator`.
+  # The specific options for each segmentation pipeline are specified at the end of this config file.
+  segm_pipeline_type: 'GASP'
+
+  # The main idea is that the default options/parameters defined in this main config file can be overwritten by run-specific
+  # options defined in additional config files (exactly as in speedrun, https://github.com/inferno-pytorch/speedrun).
+  # First, we define the directory in which these additional config files are found (also with extension .yml):
+  postproc_presets_dir_path: '/home/nhuetsch/Desktop/github/segmfriends/experiments/cremi/postproc_compare/postproc_configs/presets'
+  # FIXME or change:
+  postproc_presets_file_path: '/home/nhuetsch/Desktop/github/segmfriends/experiments/cremi/postproc_compare/postproc_configs/presets/postproc_presets.yml'
+
+
+  # Optionally, we can decide to always overwrite the options of this main config file with the following ones:
+  # (the last config file that will be applied will have highest priority, overwriting previous parameters)
+  # TODO: already deprecated. Use the iterated options below, modify this master, or combine multiple presets...?
+  presets_to_be_applied_by_default:
+  #  - "simple_WSDT"
+  #    - "gen_HC_DTWS"
+
+
+  # --- Iterated options ---
+  # Use the following iterated options to run multiple pipelines at the same time.
+  # From each combination of the options below, a segmentation pipeline will be generated.
+  # For example, if we specify three presets ["GASP-Avg", "MWS", "multicut"] (notice that this will require having three
+  # configs files with those names defined in the presets folder) and three CREMI samples, in total we will get 9 runs.
+
+  iterated_options:
+    preset: ["MEAN", "SUM", "Mutex", "MEANconstr", "SUMconstr"] # Presets to be found in the presets folder
+    # TODO: The following options modify things at loading time, so they need to be handled specifically:
+    sample: "C"
+    edge_prob: 0.
+    noise_factor: 0.
+#  TODO: do something with this. WHy do I need both exactly...?
+#    crop_slice:
+#      A:
+#        - ":, 0: 31,:1300, -1300:"
+#        - ":, 31: 62,:1300, -1300:"
+#        - ":, 62: 93, 25: 1325,:1300"
+#        - ":, 93: 124, -1300:,:1300"
+#      B:
+#        - ":, 0: 31, 50: 1350, 200: 1500"
+#        - ":, 31: 62, 20: 1320, 400: 1700"
+#        - ":, 62: 93, 90: 1390, 580: 1880"
+#        - ":, 93: 124, -1300:, 740: 2040"
+#      C:
+#        - ":, 0: 31, -1300:,:1300"
+#        - ":, 31: 62, 150: 1450, 95: 1395"
+#        - ":, 62: 93, 70: 1370, 125: 1425"
+#        - ":, 93: 124,:1300, -1300:"
+
+#    sub_crop_slice: ":,:, 200:500, 200:500"
+  crop_slice: ":,5:25, 50:350, 50:350"
+
+  # How many segmentation pipelines to run at the same time:
+  nb_thread_pools: 1
+
+  # We could want to run the same setup multiple times (for example to collect statistics about noise/randomness etc)
+  nb_iterations: 1
+
+
+
+  # ------------------------------
+  # Saved outputs options:
+  # ------------------------------
+  # Compute cremi score according to the given GT:
+  compute_scores: True
+
+  # Whether to save the output segmentation in a .h5 file:
+  save_segm: True
+  save_agglomeration_data: True
+  
+  # By default, two types of files are generated by each run:
+  #   - one score/config file, that will be stored in the 'scores' sub-folder of the `main_output_dir/experiment_name` folder
+  #       with the `.yml` extension
+  #   - one output segmentation file, stored in the `out_segms` subfolder with the `.h5` extension.
+
+  # Sometimes, we want to run the same setup/agglomeration multiple times (when there is randomness or noise involved
+  # for example, so we collect statistics afterward). In this case, set `overwrite_prev_files` to False and each output
+  # file name will contain a randomly assigned ID between 0 and 1000000000:
+  overwrite_prev_files: False
+
+  # In order to make the names of the saved files more readable, the name will include some things by default like the
+  # segm_pipeline_type, the CREMI sample, and the selected presets.
+  # On top of those, you can also manually define a custom "postfix" string to append to the filenames:
+  filename_postfix: "diceEXP"
+
+  # At the end get rid of small segments by removing them and growing the remaining segments with watershed:
+  WS_growing: True
+  thresh_segm_size: 200
+
+  # Prepare CREMI submission and realign back the data:
+  prepare_submission: False
+
+  # Specific for ISBI:
+  return_2D_segmentation: False # This breaks the 3D segmentation into 2D slices (evaluation on ISBI is 2D)
+  save_submission_tiff: False
+
+
+  # ------------------------------
+  # SUPERPIXEL GENERATOR OPTIONS:
+  # ------------------------------
+  from_superpixels: False
+  # The accepted options here are 'WSDT' and 'WS'
+  superpixel_generator_type: 'WSDT'
+
+  # Instead of using a superpixel generator, load a saved segmentation (no longer supported in the current option):
+  start_from_given_segmentation: False
+
+  # Options for generating superpixels with watershed on distance transform:
+  WSDT_kwargs:
+    threshold: 0.5
+    min_segment_size: 20 # THIS SHOULD NOT BE PUT TO ZERO...!
+    preserve_membrane: True
+    sigma_seeds: 0.1
+    stacked_2d: True
+    intersect_with_boundary_pixels: False
+    boundary_pixels_kwargs:
+      boundary_threshold: 0.5
+      used_offsets: [0, 1, 2, 4, 5, 7, 8]
+      offset_weights: [1., 1., 1., 1., 1., 0.9, 0.9]
+
+  # Often in order to generate superpixels, we will need to convert affinities into a pixel-wise boundary prediction map.
+  # These options specify which offsets should be used and how they should be weighted:
+  prob_map_kwargs:
+    offset_weights: [1.0, 1.0]
+    used_offsets: [1, 2]
+
+  # ------------------------------
+  # SEGMENTATION PIPELINES OPTIONS:
+  # Specific options for each segmentation pipeline
+  # ------------------------------
+  # Generally, these options are rarely modified directly in this main file.
+  # For minor "run-specific-adjustments", define instead additional presets/config-files
+  # that will overwrite the options defined here (this allows to run multiple pipelines at the same time)
+  # ------------------------------
+
+  # Options for the GASP agglomerative pipeline (also includes mutex watershed with possibility to start from superpixels)
+  GASP_kwargs:
+#    offsets_probabilities: 1.0 # Probs. for long-range edges
+#    used_offsets: [0,1,2,3,4,5,6,14,15,16,17] # In case you want to agglomerate ignoring some of the predicted offsets
+    verbose: True
+    beta_bias: 0.5 # Merge all: 0.0; split all: 1.0
+    return_extra_outputs: True
+    run_GASP_kwargs:
+      print_every: 1000000
+      export_agglomeration_data: True
+
+  # Options for Mutex wathershed pipeline starting from pixel grid graph:
+  MWS_kwargs:
+    randomize_bounds: True
+    stride:
+      - 1
+      - 6
+      - 6
+
+  # Options for the multicut pipeline:
+  multicut_kwargs:
+    weighting_scheme: 'all' # "all", "z", "xyz", None
+    solver_type: 'multicutIlpCplex' # fusionMoves, kernighanLin, multicutIlpCplex, ccFusionMoveBased
+  #  time_limit: 120
+    weight: 16.
+    verbose_visitNth: 100
+    offsets_probabilities: 1.0
+
+
+
+
+
+
+
+
+
+

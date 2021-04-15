@@ -142,7 +142,7 @@ class PostProcessingExperiment(BaseExperiment):
         # ------------------------------
         # Build segmentation pipeline:
         # ------------------------------
-        print(sample, preset, crop_slice, sub_crop_slice)
+        print(sample, preset, crop_slice) #, sub_crop_slice)
 
         offsets = self.get("offsets")
 
@@ -247,7 +247,7 @@ class PostProcessingExperiment(BaseExperiment):
         # ------------------------------
         # SAVING RESULTS:
         # ------------------------------
-        strings_to_include_in_filenames = [sample, segm_pipeline_type] + presets_collected
+        strings_to_include_in_filenames = [sample, segm_pipeline_type, str(edge_prob)] + presets_collected
         config_file_path, segm_file_path = \
             self.get_valid_out_paths(strings_to_include_in_filenames,
                                      overwrite_previous=post_proc_config.get("overwrite_prev_files", False),
@@ -333,12 +333,17 @@ class PostProcessingExperiment(BaseExperiment):
             graph = out_dict["graph"]
             is_local_edge = out_dict["is_local_edge"]
             edge_sizes = out_dict["edge_sizes"]
+            edge_weights = out_dict['edge_weights']
 
             edge_ids = np.rollaxis(graph.projectEdgesIDToPixels(), axis=3, start=0)
             merge_stats_mapped = map_features_to_label_array(edge_ids, merge_stats)
             constraint_stats_mapped = map_features_to_label_array(edge_ids, constrain_stats)
 
             node_stats_mapped = node_stats.reshape(pred_segm.shape + (node_stats.shape[1],))
+
+            edge_weights_mapped = np.moveaxis(
+                map_features_to_label_array(edge_ids, np.expand_dims(edge_weights, -1)).squeeze(), 3, 0)
+
 
             # To be saved:
             # - edge_ids, merge and constr. data (mapped)
@@ -352,6 +357,7 @@ class PostProcessingExperiment(BaseExperiment):
             writeHDF5(GT, exported_data_path, 'GT', compression='gzip')
             writeHDF5(node_stats_mapped, exported_data_path, 'node_stats', compression='gzip')
             writeHDF5(edge_ids, exported_data_path, 'edge_ids', compression='gzip')
+            writeHDF5(edge_weights_mapped, exported_data_path, 'edge_weights', compression='gzip')
 
 
         # from segmfriends.transform.combine_segms_CY import find_segmentation_mistakes

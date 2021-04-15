@@ -1,0 +1,104 @@
+affinities:
+  dtype: float32
+  inner_path: affinities_dice
+  path:
+    C: /home/nhuetsch/Desktop/Data/cremi2012/crop_maskEmb_affs_cremi_val_sample_C.h5
+experiment_name: my_first_postproc_experiment
+git_rev: beb9786c06956f3e37871f340dd9abff062ae38a
+main_output_dir: /home/nhuetsch/Desktop/cremi_experiments/
+offsets_dir_path: /home/nhuetsch/Desktop/github/segmfriends/experiments/cremi/postproc_compare/offsets
+offsets_file_name: dice_offsets.json
+postproc_config:
+  GASP_kwargs:
+    beta_bias: 0.5
+    return_extra_outputs: true
+    run_GASP_kwargs:
+      export_agglomeration_data: true
+      print_every: 1000000
+    verbose: true
+  MWS_kwargs:
+    randomize_bounds: true
+    stride:
+    - 1
+    - 6
+    - 6
+  WSDT_kwargs:
+    boundary_pixels_kwargs:
+      boundary_threshold: 0.5
+      offset_weights:
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 0.9
+      - 0.9
+      used_offsets:
+      - 0
+      - 1
+      - 2
+      - 4
+      - 5
+      - 7
+      - 8
+    intersect_with_boundary_pixels: false
+    min_segment_size: 20
+    preserve_membrane: true
+    sigma_seeds: 0.1
+    stacked_2d: true
+    threshold: 0.5
+  WS_growing: true
+  compute_scores: true
+  connected_components_on_final_segm: false
+  crop_slice: :,5:25, 50:350, 50:350
+  filename_postfix: diceEXP
+  from_superpixels: false
+  invert_affinities: false
+  iterated_options:
+    edge_prob: 0.0
+    noise_factor: 0.0
+    preset:
+    - MEAN
+    - SUM
+    - Mutex
+    - MEANconstr
+    - SUMconstr
+    sample: C
+  multicut_kwargs:
+    offsets_probabilities: 1.0
+    solver_type: multicutIlpCplex
+    verbose_visitNth: 100
+    weight: 16.0
+    weighting_scheme: all
+  nb_iterations: 1
+  nb_thread_pools: 1
+  nb_threads: 6
+  overwrite_prev_files: false
+  postproc_presets_dir_path: /home/nhuetsch/Desktop/github/segmfriends/experiments/cremi/postproc_compare/postproc_configs/presets
+  postproc_presets_file_path: /home/nhuetsch/Desktop/github/segmfriends/experiments/cremi/postproc_compare/postproc_configs/presets/postproc_presets.yml
+  prepare_submission: false
+  presets_to_be_applied_by_default: null
+  prob_map_kwargs:
+    offset_weights:
+    - 1.0
+    - 1.0
+    used_offsets:
+    - 1
+    - 2
+  restrict_to_GT_bbox: false
+  return_2D_segmentation: false
+  save_agglomeration_data: true
+  save_segm: true
+  save_submission_tiff: false
+  segm_pipeline_type: GASP
+  start_from_given_segmentation: false
+  superpixel_generator_type: WSDT
+  thresh_segm_size: 200
+volume_config:
+  GT:
+    ds_order: 1
+    dtype: int32
+    inner_path:
+      C: GT
+    path:
+      C: /home/nhuetsch/Desktop/Data/cremi2012/crop_maskEmb_affs_cremi_val_sample_C.h5
