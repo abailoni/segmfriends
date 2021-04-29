@@ -9,7 +9,7 @@ main_output_dir: "/home/nhuetsch/Desktop/cremi_experiments/"
 
 # Now let's define the name of the current experiment (a folder with this name will be created in main_output_dir,
 # if not existing already):
-experiment_name: my_first_postproc_experiment
+experiment_name: frustration_experiments
 # -----------------------------------
 
 
@@ -132,7 +132,7 @@ postproc_config:
     preset: ["MEAN", "SUM", "Mutex", "MEANconstr", "SUMconstr"] # Presets to be found in the presets folder
     # TODO: The following options modify things at loading time, so they need to be handled specifically:
     sample: "C"
-    edge_prob: 0.
+    edge_prob: [0., 0.1, 0.2, 0.3, 0.5, 1.]
     noise_factor: 0.
 #  TODO: do something with this. WHy do I need both exactly...?
 #    crop_slice:
@@ -153,7 +153,7 @@ postproc_config:
 #        - ":, 93: 124,:1300, -1300:"
 
 #    sub_crop_slice: ":,:, 200:500, 200:500"
-  crop_slice: ":,5:25, 50:350, 50:350"
+  crop_slice: ":,5:30, 50:400, 50:400"
 
   # How many segmentation pipelines to run at the same time:
   nb_thread_pools: 1
@@ -186,7 +186,7 @@ postproc_config:
   # In order to make the names of the saved files more readable, the name will include some things by default like the
   # segm_pipeline_type, the CREMI sample, and the selected presets.
   # On top of those, you can also manually define a custom "postfix" string to append to the filenames:
-  filename_postfix: "diceEXP"
+  filename_postfix:
 
   # At the end get rid of small segments by removing them and growing the remaining segments with watershed:
   WS_growing: True

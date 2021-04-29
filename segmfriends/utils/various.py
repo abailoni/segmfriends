@@ -202,8 +202,8 @@ def get_hdf5_inner_paths(path, inner_path=None):
 
 
 
-def cremi_score(gt, seg, return_all_scores=False, border_threshold=None,
-                run_connected_components=True):
+def cremi_score(gt: object, seg: object, return_all_scores: object = False, border_threshold: object = None,
+                run_connected_components: object = True) -> object:
     if cremi is None:
         raise ImportError("The cremi package is necessary to run cremi_score()")
 

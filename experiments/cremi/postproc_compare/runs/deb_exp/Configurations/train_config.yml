@@ -1,13 +1,15 @@
 affinities:
   dtype: float32
-  inner_path: affinities_dice
+  inner_path: predictions/full_affs
   path:
-    C: /home/nhuetsch/Desktop/Data/cremi2012/crop_maskEmb_affs_cremi_val_sample_C.h5
-experiment_name: my_first_postproc_experiment
-git_rev: beb9786c06956f3e37871f340dd9abff062ae38a
+    A: /home/nhuetsch/Desktop/Data/cremi2012/sampleA_train.h5
+    B: /home/nhuetsch/Desktop/Data/cremi2012/sampleB_train.h5
+    C: /home/nhuetsch/Desktop/Data/cremi2012/sampleC_train.h5
+experiment_name: Avg
+git_rev: 2e5bf13da2b520e4d710e16e465372802799c4d8
 main_output_dir: /home/nhuetsch/Desktop/cremi_experiments/
 offsets_dir_path: /home/nhuetsch/Desktop/github/segmfriends/experiments/cremi/postproc_compare/offsets
-offsets_file_name: dice_offsets.json
+offsets_file_name: SOA_offsets.json
 postproc_config:
   GASP_kwargs:
     beta_bias: 0.5
@@ -50,20 +52,24 @@ postproc_config:
   WS_growing: true
   compute_scores: true
   connected_components_on_final_segm: false
-  crop_slice: :,5:25, 50:350, 50:350
-  filename_postfix: diceEXP
+  filename_postfix: null
   from_superpixels: false
   invert_affinities: false
   iterated_options:
-    edge_prob: 0.0
+    crop_slice:
+    - :, 10:25, 200:900, 200:900
+    - :, 25:40, 200:900, 200:900
+    - :, 40:55, 200:900, 200:900
+    - :, 55:70, 200:900, 200:900
+    - :, 70:85, 200:900, 200:900
+    edge_prob: 0.1
     noise_factor: 0.0
     preset:
     - MEAN
-    - SUM
-    - Mutex
-    - MEANconstr
-    - SUMconstr
-    sample: C
+    sample:
+    - A
+    - B
+    - C
   multicut_kwargs:
     offsets_probabilities: 1.0
     solver_type: multicutIlpCplex
@@ -99,6 +105,10 @@ volume_config:
     ds_order: 1
     dtype: int32
     inner_path:
-      C: GT
+      A: segmentations/groundtruth_fixed
+      B: segmentations/groundtruth_fixed_OLD
+      C: segmentations/groundtruth_fixed
     path:
-      C: /home/nhuetsch/Desktop/Data/cremi2012/crop_maskEmb_affs_cremi_val_sample_C.h5
+      A: /home/nhuetsch/Desktop/Data/cremi2012/sampleA_train.h5
+      B: /home/nhuetsch/Desktop/Data/cremi2012/sampleB_train.h5
+      C: /home/nhuetsch/Desktop/Data/cremi2012/sampleC_train.h5

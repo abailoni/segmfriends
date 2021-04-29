@@ -328,21 +328,27 @@ class PostProcessingExperiment(BaseExperiment):
                                    ds_factor=(1,2,2))
 
         if post_proc_config.get("save_agglomeration_data", False):
-            node_stats, edge_data, action_data = out_dict["agglomeration_data"]
-            _, constrain_stats, merge_stats = edge_data
+            #node_stats, edge_data, action_data = out_dict["agglomeration_data"]
+            #_, constrain_stats, merge_stats = edge_data
+            #is_local_edge = out_dict["is_local_edge"]
+            #edge_sizes = out_dict["edge_sizes"]
+            #merge_stats_mapped = map_features_to_label_array(edge_ids, merge_stats)
+            #constraint_stats_mapped = map_features_to_label_array(edge_ids, constrain_stats)
+            #node_stats_mapped = node_stats.reshape(pred_segm.shape + (node_stats.shape[1],))
+
             graph = out_dict["graph"]
-            is_local_edge = out_dict["is_local_edge"]
-            edge_sizes = out_dict["edge_sizes"]
-            edge_weights = out_dict['edge_weights']
-
             edge_ids = np.rollaxis(graph.projectEdgesIDToPixels(), axis=3, start=0)
-            merge_stats_mapped = map_features_to_label_array(edge_ids, merge_stats)
-            constraint_stats_mapped = map_features_to_label_array(edge_ids, constrain_stats)
-
-            node_stats_mapped = node_stats.reshape(pred_segm.shape + (node_stats.shape[1],))
-
+            edge_weights = out_dict['edge_weights']
             edge_weights_mapped = np.moveaxis(
                 map_features_to_label_array(edge_ids, np.expand_dims(edge_weights, -1)).squeeze(), 3, 0)
+
+            edge_labels1D = graph.nodeLabelsToEdgeLabels(pred_segm.reshape(-1))
+            edge_labels = np.moveaxis(
+                map_features_to_label_array(edge_ids, np.expand_dims(edge_labels1D, -1)).squeeze(), 3, 0)
+
+            edge_labels1D_WS = graph.nodeLabelsToEdgeLabels(pred_segm_WS.reshape(-1))
+            edge_labels_WS = np.moveaxis(
+                map_features_to_label_array(edge_ids, np.expand_dims(edge_labels1D_WS, -1)).squeeze(), 3, 0)
 
 
             # To be saved:
@@ -350,14 +356,23 @@ class PostProcessingExperiment(BaseExperiment):
             # - affinities and GT
             # - (final segm)
             exported_data_path = segm_file_path.replace(".h5", "_exported_data.h5")
-            writeHDF5(pred_segm.astype('uint32'), exported_data_path, 'segm', compression='gzip')
-            writeHDF5(merge_stats_mapped, exported_data_path, 'merge_stats', compression='gzip')
-            writeHDF5(constraint_stats_mapped, exported_data_path, 'constraint_stats', compression='gzip')
-            writeHDF5(affinities, exported_data_path, 'affinities', compression='gzip')
             writeHDF5(GT, exported_data_path, 'GT', compression='gzip')
-            writeHDF5(node_stats_mapped, exported_data_path, 'node_stats', compression='gzip')
-            writeHDF5(edge_ids, exported_data_path, 'edge_ids', compression='gzip')
+            #writeHDF5(affinities, exported_data_path, 'affinities', compression='gzip')
+            #writeHDF5(edge_ids, exported_data_path, 'edge_ids', compression='gzip')
             writeHDF5(edge_weights_mapped, exported_data_path, 'edge_weights', compression='gzip')
+            writeHDF5(pred_segm.astype('uint32'), exported_data_path, 'segm', compression='gzip')
+            writeHDF5(pred_segm_WS.astype('uint32'), exported_data_path, 'segm_WS', compression='gzip')
+            writeHDF5(edge_labels, exported_data_path, 'edge_labels', compression='gzip')
+            writeHDF5(edge_labels_WS, exported_data_path, 'edge_labels_WS', compression='gzip')
+            #writeHDF5(crop_slice, exported_data_path, 'crop', compression='gzip')
+
+
+
+
+
+            #writeHDF5(merge_stats_mapped, exported_data_path, 'merge_stats', compression='gzip')
+            #writeHDF5(constraint_stats_mapped, exported_data_path, 'constraint_stats', compression='gzip')
+            #writeHDF5(node_stats_mapped, exported_data_path, 'node_stats', compression='gzip')
 
 
         # from segmfriends.transform.combine_segms_CY import find_segmentation_mistakes

@@ -9,7 +9,7 @@ main_output_dir: "/home/nhuetsch/Desktop/cremi_experiments/"
 
 # Now let's define the name of the current experiment (a folder with this name will be created in main_output_dir,
 # if not existing already):
-experiment_name: frustration_experiments
+experiment_name: Avg
 # -----------------------------------
 
 
@@ -17,7 +17,7 @@ experiment_name: frustration_experiments
 # -----------------------------------
 #### OFFSETS ####
 # Load the offsets from a .json file:
-offsets_file_name: "dice_offsets.json"
+offsets_file_name: "SOA_offsets.json"
 # Filename and folder are specified separately, so at runtime you can easily modify only the name of offset filename:
 offsets_dir_path: '/home/nhuetsch/Desktop/github/segmfriends/experiments/cremi/postproc_compare/offsets'
 
@@ -34,13 +34,13 @@ offsets_dir_path: '/home/nhuetsch/Desktop/github/segmfriends/experiments/cremi/p
 
 # 1) You can specify the path manually:
 affinities:
-  inner_path: 'affinities_dice'
+  inner_path: 'predictions/full_affs'
   dtype: float32
   # In case you don't want to specify it manually, comment out the following lines and look at the next options:
   path:
-    #A: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleA_train.h5"
-    #B: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
-    C: '/home/nhuetsch/Desktop/Data/cremi2012/crop_maskEmb_affs_cremi_val_sample_C.h5'
+    A: '/home/nhuetsch/Desktop/Data/cremi2012/sampleA_train.h5'
+    B: '/home/nhuetsch/Desktop/Data/cremi2012/sampleB_train.h5'
+    C: '/home/nhuetsch/Desktop/Data/cremi2012/sampleC_train.h5'
 
 # 2) If the previous `path` option is not given, the script can get the affinities from
 # a sub-directory of `main_output_dir`:
@@ -60,13 +60,13 @@ affinities:
 volume_config:
   GT:
     path:
-      #A: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleA_train.h5"
-      #B: "$DATA_HOME/datasets/cremi/SOA_affinities/sampleB_train.h5"
-      C: '/home/nhuetsch/Desktop/Data/cremi2012/crop_maskEmb_affs_cremi_val_sample_C.h5'
+      A: '/home/nhuetsch/Desktop/Data/cremi2012/sampleA_train.h5'
+      B: '/home/nhuetsch/Desktop/Data/cremi2012/sampleB_train.h5'
+      C: '/home/nhuetsch/Desktop/Data/cremi2012/sampleC_train.h5'
     inner_path:
-      #A: "segmentations/groundtruth_fixed"
-      #B: "segmentations/groundtruth_fixed_OLD"
-      C: 'GT'
+      A: "segmentations/groundtruth_fixed"
+      B: "segmentations/groundtruth_fixed_OLD"
+      C: "segmentations/groundtruth_fixed"
     dtype: int32
     ds_order: 1
     #crop_slice: ":,:,:"
@@ -129,10 +129,10 @@ postproc_config:
   # configs files with those names defined in the presets folder) and three CREMI samples, in total we will get 9 runs.
 
   iterated_options:
-    preset: ["MEAN", "SUM", "Mutex", "MEANconstr", "SUMconstr"] # Presets to be found in the presets folder
+    preset: ["MEAN"] # Presets to be found in the presets folder
     # TODO: The following options modify things at loading time, so they need to be handled specifically:
-    sample: "C"
-    edge_prob: [0., 0.1, 0.2, 0.3, 0.5, 1.]
+    sample: ["A", "B", "C"]
+    edge_prob: 0.1
     noise_factor: 0.
 #  TODO: do something with this. WHy do I need both exactly...?
 #    crop_slice:
@@ -153,7 +153,8 @@ postproc_config:
 #        - ":, 93: 124,:1300, -1300:"
 
 #    sub_crop_slice: ":,:, 200:500, 200:500"
-  crop_slice: ":,5:30, 50:400, 50:400"
+    crop_slice: [":, 10:25, 200:900, 200:900", ":, 25:40, 200:900, 200:900", ":, 40:55, 200:900, 200:900", ":, 55:70, 200:900, 200:900", ":, 70:85, 200:900, 200:900"]
+              #- :, 5:20, 50:450, 50:450"
 
   # How many segmentation pipelines to run at the same time:
   nb_thread_pools: 1
