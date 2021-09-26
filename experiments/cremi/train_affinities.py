@@ -87,7 +87,7 @@ class BaseCremiExperiment(BaseExperiment, InfernoMixin, TensorboardMixin):
         self._trainer.build_validation_criterion(criterion)
 
     def set_devices(self):
-        # # --------- In case of multiple GPUs: ------------
+        # --------- In case of multiple GPUs: ------------
         # n_gpus = torch.cuda.device_count()
         # gpu_list = range(n_gpus)
         # self.set("gpu_list", gpu_list)

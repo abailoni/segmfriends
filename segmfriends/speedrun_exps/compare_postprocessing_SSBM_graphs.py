@@ -179,7 +179,7 @@ class SSBMPostProcessingExperiment(BaseExperiment):
                                    np.expand_dims(np.expand_dims(node_labels, axis=0), axis=0),
                                    return_all_scores=True, run_connected_components=False)
             ARAND_score = adjusted_rand_score(node_labels, GT_labels)
-            print(runtime, ARAND_score, scores)
+            print(preset, etain, 1-ARAND_score, scores)
         # counts = np.bincount(node_labels.astype('int64'))
         # nb_clusters = (counts > 0).sum()
         # biggest_clusters = np.sort(counts)[::-1][:10]

@@ -1,18 +1,24 @@
-experiment_name: subcrop_train_samples_LR01_final_4
+experiment_name: subcrop_train_samples_LR01_final_Paul
 
 postproc_config:
-#  TODO: name, preset
+#  TODO: uncomment in GASP repo
   from_superpixels: False
 
-  nb_thread_pools: 3
+  filename_postfix: graphDataPaul
+
+  nb_thread_pools: 1
   restrict_to_GT_bbox: True
+
+  GASP_kwargs:
+    return_extra_outputs: True
+    beta_bias: 1. # Do not agglomerate
 
   iterated_options:
 #    preset: ["MEAN", "MEANconstr", "SUM", "SUMconstr", "Mutex"] # Presets to be found in the presets folder
 #    preset: ["MutexPixGrid", "MEAN"] # Presets to be found in the presets folder
     preset:
       - "MEAN"
-      - "MEANconstr"
+#      - "MEANconstr"
 #      - "SUM"
 #      - "SUMconstr"
 #      - "MutexPixGrid"
@@ -20,8 +26,8 @@ postproc_config:
 #      - "MAXconstr"
 #      - "MIN"
 #      - "MINconstr"
-#    sample: [ "A"]
-    sample: ["B", "A", "C"]
+    sample: [ "A"]
+#    sample: ["B", "A", "C"]
     edge_prob: 0.1
     noise_factor: 0.
 #    crop_slice: ":,100:"

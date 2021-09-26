@@ -1,5 +1,7 @@
 # This config should be combined for example with "example_train_affs_dowscaled_data.yml"
 
+# TODO: export_path
+
 shortcuts:
   z_size: &z_size 12
   xy_size: &xy_size 272

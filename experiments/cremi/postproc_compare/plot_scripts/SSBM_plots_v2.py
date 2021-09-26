@@ -87,14 +87,20 @@ for filename in os.listdir(data_dir):
 # Start making the plot:
 # -------------------
 
+plt.rcParams.update({
+    "text.usetex": True,
+})
+
 font = {
         'weight' : 'bold',
-        'size'   : 25}
-
+        'size'   : 55}
+#
 matplotlib.rc('font', **font)
+matplotlib.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 plots_dir = os.path.join(project_dir, exp_name, "plots")
 segm_utils.check_dir_and_create(plots_dir)
+# f, axes = plt.subplots(ncols=3, nrows=1, figsize=(48, 16), sharey='all')
 f, axes = plt.subplots(ncols=3, nrows=1, figsize=(48, 16))
 for a in f.get_axes():
     a.tick_params(
@@ -120,7 +126,15 @@ for used_gt in selected_GT_labels:
     GT_mask = np.logical_or(GT_mask, GT == used_gt)
 GT[np.logical_not(GT_mask)] = 0
 
-for idx_agglo, agglo_type in enumerate(["MEAN", "SUM", "Mutex"]):
+max_matrix_rows = 0
+
+labels = {
+    "SUM": "GAEC (Sum Linkage)",
+    "Mutex": "MWS (AbsMax Linkage)",
+    "MEAN": "HC-Avg (Avg Linkage)"
+}
+
+for idx_agglo, agglo_type in enumerate(["SUM", "Mutex", "MEAN"]):
     agglo_data = collected[agglo_type]
     N = GT.shape[0]
     action_data = agglo_data["action_data"].astype('uint64')
@@ -279,9 +293,20 @@ for idx_agglo, agglo_type in enumerate(["MEAN", "SUM", "Mutex"]):
 
     # Repeat the last segmentation some times:
     # break_space = int(plot_matrix_inflated.shape[0]*0.0)
-    last_clustering_reps = int(plot_matrix_inflated.shape[0]*0.08)
+    last_clustering_reps = int(plot_matrix_inflated.shape[0]*0.04)
     plot_matrix_inflated = np.concatenate([plot_matrix_inflated, np.tile(current_segm_inflated, reps=(last_clustering_reps,1))], axis =0)
     plot_dendr_lines = np.concatenate([plot_dendr_lines, np.ones((last_clustering_reps,plot_dendr_lines.shape[1]))], axis =0)
+
+    if plot_matrix_inflated.shape[0] >= max_matrix_rows:
+        max_matrix_rows = plot_matrix_inflated.shape[0]
+    else:
+        # Add some rows to the matrix to make it the same height of other agglos:
+        diff = max_matrix_rows - plot_matrix_inflated.shape[0]
+        plot_matrix_inflated = np.concatenate(
+            [plot_matrix_inflated, np.tile(current_segm_inflated, reps=(diff, 1))], axis=0)
+        plot_dendr_lines = np.concatenate(
+            [plot_dendr_lines, np.ones((diff, plot_dendr_lines.shape[1]))], axis=0)
+
 
     # Remap colors in final plot matrix:
     # TODO: fix this nonsense
@@ -296,7 +321,24 @@ for idx_agglo, agglo_type in enumerate(["MEAN", "SUM", "Mutex"]):
 
     plot_matrix_inflated_masked = mask_the_mask(plot_matrix_inflated, value_to_mask=1)
 
-    axes[idx_agglo].matshow(np.flipud(plot_dendr_lines), cmap="gray", interpolation="None", vmin=0, vmax=1, origin="lower")
+    axes[idx_agglo].matshow(np.flipud(plot_dendr_lines), cmap="gray", interpolation="None", vmin=0, vmax=1,
+                            origin="lower")
     axes[idx_agglo].matshow(np.flipud(plot_matrix_inflated_masked), cmap="bwr", interpolation="None", origin="lower")
-    axes[idx_agglo].set_title(agglo_type)
-f.savefig(os.path.join(plots_dir, 'new_agglo_order.png'), format='png')
+    axes[idx_agglo].set_title(r'\textbf{' + labels[agglo_type] + r'}', y=-0.12, fontsize=70)
+
+
+x = np.arange(0, 500)  # the grid to which your data corresponds
+nx = x.shape[0]
+no_labels = 11  # how many labels to see on axis x
+step_x = int(nx / (no_labels - 1))  # step between consecutive labels
+x_positions = np.arange(0, nx, step_x)  # pixel count at label position
+x_labels = (x_positions/2).astype('int')  # labels you want to see
+for ax in axes:
+    plt.sca(ax)
+    plt.yticks(x_positions, x_labels)
+
+
+
+
+f.tight_layout(rect=[0, 0.02, 1, 1])
+f.savefig(os.path.join(plots_dir, 'new_agglo_order.pdf'), format='pdf')

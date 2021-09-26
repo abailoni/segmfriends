@@ -13,7 +13,6 @@ def lifted_multicut(n_nodes, local_uvs, local_costs, lifted_uvs, lifted_costs, t
     graph = nifty.graph.UndirectedGraph(n_nodes)
     graph.insertEdges(local_uvs)
 
-
     lifted_obj = nlmc.liftedMulticutObjective(graph)
     lifted_obj.setCosts(local_uvs, local_costs)
     lifted_obj.setCosts(lifted_uvs, lifted_costs)

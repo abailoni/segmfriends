@@ -16,6 +16,7 @@ from segmfriends.utils.config_utils import collect_score_configs
 project_dir = os.path.join(get_trendytukan_drive_dir(), "projects/new_agglo_compare")
 
 EXP_NAMES = [
+    # "subcrop_train_samples_LR01_final_PAPER",
     "subcrop_train_samples_SP_LR0_full_PAPER",
 ]
 
@@ -58,12 +59,12 @@ keys_to_collect = [
     # (['postproc_config', 'crop'], 'string'),
     # (['postproc_config', 'presets_collected'], 'string'),
     # (['score_WS', 'cremi-score'], 'f', 3),
-    (['score_WS', 'adapted-rand'], 'f', 4),
-    (['score_WS', 'vi-split'], 'f', 3),
-    (['score_WS', 'vi-merge'], 'f', 3),
+    # (['score_WS', 'adapted-rand'], 'f', 4),
+    # (['score_WS', 'vi-split'], 'f', 3),
+    # (['score_WS', 'vi-merge'], 'f', 3),
     # (['run_GASP_runtime'], 'f', 1),
-    (['full_GASP_pipeline_runtime'], 'f', 0),
-    # (['multicut_energy'], 'f', 0),
+    # (['full_GASP_pipeline_runtime'], 'f', 0),
+    (['multicut_energy'], 'f', 0),
 ]
 
 
@@ -109,10 +110,10 @@ for exp_name in EXP_NAMES:
         organize_configs_by=(
             # ('postproc_config', 'sample'),
             ('postproc_config', 'presets_collected'),
-                              ('postproc_config', 'nb_nodes')
+                              # ('postproc_config', 'nb_nodes')
                              ),
-        # files_to_be_exlcuded=["MINconstr"]
-        restrict_files_to=['MINconstr']
+        # files_to_be_exlcuded=["MAX", "MAXconstr", "MIN", "MINconstr"]
+        # restrict_files_to=['MINconstr']
     )
 
     # results_collected = results_collected["C"]

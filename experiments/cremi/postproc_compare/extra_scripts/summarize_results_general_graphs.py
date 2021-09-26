@@ -15,6 +15,11 @@ from segmfriends.utils.config_utils import collect_score_configs
 
 project_dir = os.path.join(get_trendytukan_drive_dir(), "projects/new_agglo_compare_general_graphs")
 
+used_agglo_types = \
+    ["SUM", "SUMconstr", "MutexGraphEff", "MEAN", "MEANconstr", "MAX", "MAXconstr", "MIN", "MINconstr"]
+    # ["SUM", "SUMconstr", "MutexGraphEff", "MEAN", "MEANconstr", "MAX", "MIN", "MINconstr"]
+    # ["SUM", "SUMconstr", "MutexGraphEff", "MEAN", "MEANconstr"]
+
 EXP_NAMES = [
     "compare_energies",
 ]
@@ -38,12 +43,12 @@ INCLUDE_STRINGS = [
 
 POSTFIX_FILE = "_all"
 
-COMPUTE_REL_DIFF= True
+COMPUTE_REL_DIFF= False
 
-LATEX_OUTPUT = False
+LATEX_OUTPUT = True
 
 # Options for coloring:
-COLOR_SCORES = True
+COLOR_SCORES = False
 GOOD_THRESH = 100
 BAD_THRESH = 1000
 
@@ -61,7 +66,7 @@ INCLUDE_SCORE_FILENAME = False
 #   - type of the data (how to print it in the table
 #   - number of floating digits (optional)
 key_to_collect = \
-    (['multicut_energy'], 'f', 3)
+    (['multicut_energy'], 'f', 0)
     # (['runtime'], 'f', 4)
     # (['postproc_config', 'sample'], 'string'),
     # (['postproc_config', 'crop'], 'string'),
@@ -115,8 +120,9 @@ for exp_name in EXP_NAMES:
     for dataset_name in os.listdir(exp_dir):
         sub_directory = os.path.join(exp_dir, dataset_name)
 
-        if dataset_name != "fruitfly-large":
+        if dataset_name == "fruitfly-large":
             continue
+
 
         if os.path.isdir(sub_directory):
             scores_path = os.path.join(sub_directory, "scores")
@@ -134,7 +140,10 @@ for exp_name in EXP_NAMES:
 
             # Build headers:
             if not table_header_built:
-                all_agglo_types = list(results_collected.keys())
+                if used_agglo_types is not None:
+                    all_agglo_types = used_agglo_types
+                else:
+                    all_agglo_types = list(results_collected.keys())
                 nb_agglos = len(all_agglo_types)
                 first_row = [""] + all_agglo_types
                 if COMPUTE_REL_DIFF:
@@ -142,10 +151,6 @@ for exp_name in EXP_NAMES:
                     first_row += ["Min value"]
                 rows_table_collected.append(first_row)
                 table_header_built = True
-            else:
-                if nb_agglos != len(results_collected):
-                    print()
-                assert nb_agglos == len(results_collected), "Some agglotypes were run only on certain datasets"
 
 
             new_table_entrance = []

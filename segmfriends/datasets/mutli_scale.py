@@ -19,7 +19,7 @@ except ImportError:
     raise ImportError("CremiDataset requires neurofire")
 
 from ..utils.various import yaml2dict
-from ..transform.volume import DownSampleAndCropTensorsInBatch, ReplicateTensorsInBatch
+from ..transform.volume import DownSampleAndCropTensorsInBatch, ReplicateTensorsInBatch, From3Dto2Dtensors
 from ..transform.affinities import affinity_config_to_transform, Segmentation2AffinitiesDynamicOffsets
 
 class MultiScaleDataset(Zip):
@@ -110,6 +110,9 @@ class MultiScaleDataset(Zip):
             transforms.add(VolumeAsymmetricCrop(**crop_config))
 
         transforms.add(AsTorchBatch(3))
+
+        if self.transform_config.get('convert_batch_to_2D', False):
+            transforms.add(From3Dto2Dtensors())
         return transforms
 
     @classmethod
@@ -119,7 +122,7 @@ class MultiScaleDataset(Zip):
         volume_config = config.get('volume_config')
         slicing_config = config.get('slicing_config', {})
         transform_config = config.get('transform_config')
-        inference_mode = config.get('inference_mode')
+        inference_mode = config.get('inference_mode', False)
         return cls(name, volume_config=volume_config,
                    slicing_config=slicing_config,
                    transform_config=transform_config,

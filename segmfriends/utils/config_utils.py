@@ -242,7 +242,9 @@ def collect_score_configs(scores_path,
                   organize_configs_by=('presets_collected',
                                        # ('GASP_kwargs', 'offsets_probabilities'),
                                        'noise_factor'
-                                       )
+                                       ),
+                          files_to_be_exlcuded=None,
+                          restrict_files_to=None,
                           ):
     """
     Loads all the config files in the given directory `scores_path`.
@@ -251,11 +253,22 @@ def collect_score_configs(scores_path,
     by agglo type, by noise amount, etc...)
 
     """
+    files_to_be_exlcuded = files_to_be_exlcuded if files_to_be_exlcuded is not None else []
+    restrict_files_to = restrict_files_to if restrict_files_to is not None else []
     results_collected = {}
     for filename in os.listdir(scores_path):
         score_file = os.path.join(scores_path, filename)
         if os.path.isfile(score_file):
+            exclude = False
             if not filename.endswith('.yml') or filename.startswith("."):
+                exclude = True
+            for string in files_to_be_exlcuded:
+                if string in filename:
+                    exclude = True
+            for string in restrict_files_to:
+                if string not in filename:
+                    exclude = True
+            if exclude:
                 continue
             with open(score_file, 'rb') as f:
                 config_dict = yaml.load(f)

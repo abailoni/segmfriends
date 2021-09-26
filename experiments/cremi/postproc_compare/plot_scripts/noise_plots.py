@@ -33,11 +33,11 @@ def make_plots(project_directory, exp_name):
                       True: 'C3'},
               }
 
-    key_y = ['score_WS', 'vi-merge']
-    # key_y = ['score_WS', 'adapted-rand']
+    # key_y = ['score_WS', 'vi-merge']
+    key_y = ['score_WS', 'adapted-rand']
     key_x = ['postproc_config', 'noise_factor']
     # key_y = ['score_WS', 'vi-split']
-    # key_y = ['energy']
+    # key_y = ['multicut_energy']
     # key_x = ['runtime']
     key_value = ['run_GASP_runtime']
 
@@ -52,26 +52,27 @@ def make_plots(project_directory, exp_name):
     legend_labels = {
         'vi-merge': "VI-merge",
         'vi-split': "VI-split",
-        'adapted-rand': "Rand-Score",
-        'noise_factor': "\\textbf{Over-clustering} noise added to edge weights",
-        'energy': 'Multicut energy'
+        'adapted-rand': "ARAND Error",
+        'noise_factor': "Amount of structured noise added to edge weights",
+        'multicut_energy': 'Multicut objective'
 
     }
 
     update_rule_names = {
-        'sum': "GAEC (Sum)", 'mutex_watershed': "MWS", 'mean': "HC-Avg"
+        'sum': {False: "GAEC", True: "HCC-Sum"}, 'mutex_watershed': {False: "MWS"}, 'mean': {False: "HC-Avg", True: "HCC-Avg"}
     }
 
     axis_ranges = {
         'vi-merge': None,
         'vi-split': None,
-        'adapted-rand': [0.65, 0.98],
+        'adapted-rand': [0.0, 0.2],
+        'multicut_energy': None
     }
 
     for all_keys in list_all_keys:
         if USE_LATEX:
             rc('text', usetex=True)
-        matplotlib.rcParams.update({'font.size': 12})
+        matplotlib.rcParams.update({'font.size': 18})
         # f, axes = plt.subplots(ncols=1, nrows=2, figsize=(9, 7))
 
         for k, selected_edge_prob in enumerate([1., 0.1]):
@@ -114,8 +115,8 @@ def make_plots(project_directory, exp_name):
                                 return_recursive_key_in_dict(data_dict, key_x))
                             multiple_runtimes.append(
                                 return_recursive_key_in_dict(data_dict, key_value))
-                            if key_y[-1] == 'adapted-rand':
-                                multiple_VI_split[-1] = 1 - multiple_VI_split[-1]
+                            # if key_y[-1] == 'adapted-rand':
+                            #     multiple_VI_split[-1] = 1 - multiple_VI_split[-1]
 
                             counter_per_type += 1
                         if len(multiple_VI_split) == 0:
@@ -159,8 +160,8 @@ def make_plots(project_directory, exp_name):
                     #     continue
 
                     # Compose plot label:
-                    plot_label_1 = update_rule_names[agglo_type]
-                    plot_label_2 = " + Constraints" if non_link else " "
+                    label = update_rule_names[agglo_type][non_link]
+                    # plot_label_2 = " + Constraints" if non_link else " "
 
                     if all_keys[-1] == 'runtime':
                         error_bars_split = None
@@ -176,7 +177,6 @@ def make_plots(project_directory, exp_name):
 
                     print("Found in {} - : {} ({})".format(agglo_type, non_link, counter_per_type, k))
 
-                    label = plot_label_1 + plot_label_2
 
                     argsort = np.argsort(VI_merge)
                     ax.fill_between(VI_merge[argsort], split_q_0_25[argsort],
@@ -233,13 +233,14 @@ def make_plots(project_directory, exp_name):
             # Reorder legend:
             handles, labels = ax.get_legend_handles_labels()
             # Original order: 0:Sum, 1:SumCLC, 2:MWS, 3:Mean, 4:MeanCLC
-            new_ordering = [3, 0, 1, 2, 4] if k == 0 else [3, 0, 1, 2, 4]
+            # new_ordering = [3, 0, 1, 2, 4] if k == 0 else [3, 0, 1, 2, 4]
+            new_ordering = [3, 4, 0, 1, 2]
 
             if len(handles) == 5:
                 handles = [handles[new_indx] for new_indx in new_ordering]
                 labels = [labels[new_indx] for new_indx in new_ordering]
 
-            loc = 'best' if k == 1 else "lower left"
+            loc = "upper left"
             ax.legend(handles, labels, loc=loc)
 
             # if k == 1:
@@ -257,6 +258,7 @@ def make_plots(project_directory, exp_name):
             check_dir_and_create(plot_dir)
             plt.subplots_adjust(bottom=0.15)
 
+            f.tight_layout(rect=[0, 0, 1, 1])
             # f.suptitle("Crop of CREMI sample {} (90 x 300 x 300)".format(sample))
             f.savefig(os.path.join(plot_dir,
                                    'noise_plots_{}_{}.pdf'.format(key_y[-1], k)),

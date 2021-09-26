@@ -1,11 +1,11 @@
-experiment_name: subcrop_train_samples_SP_LR0_full_final
+experiment_name: subcrop_train_samples_SP_LR0_full
 
 
 postproc_config:
 #  TODO: name, subcrop, preset
   from_superpixels: True
 #  save_superpixel_segmentation: True
-  restrict_to_GT_bbox: True
+  restrict_to_GT_bbox: False
 
   nb_thread_pools: 1
 
@@ -17,10 +17,10 @@ postproc_config:
 #      - "SUM"
 #      - "SUMconstr"
 #      - "MutexGraphEff"
-      - "MAX"
+#      - "MAX"
 #      - "MAXconstr"
 #      - "MIN"
-#      - "MINconstr"
+      - "MINconstr"
     #    preset: ["SUMnoLogs", "SUMconstrNoLogs", "SUM", "SUMconstr"] # Presets to be found in the presets folder
 #    preset: ["SUM", "SUMconstr"] # Presets to be found in the presets folder
 #    preset: ["MINconstr"] # Presets to be found in the presets folder
@@ -29,10 +29,11 @@ postproc_config:
 #    sample: ["B", "A", "C"]
     edge_prob: 0.
     noise_factor: 0.
-    crop_slice: ":,:,:,:"
-#      A: ":, :,:,:"
-#      B: ":, :, 90:, 580: 1900"
-#      C: ":, :, 70:1450, 95:1425"
+    crop_slice:
+#    ":,:,:,:"
+      A: ":, :,:,:"
+      B: ":, :, 90:, 580: 1900"
+      C: ":, :, 70:1450, 95:1425"
 #    sub_crop_slice: ":,:, 200:300, 200:300"
     sub_crop_slice: ":,:, :, :"
 

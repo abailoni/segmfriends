@@ -55,14 +55,14 @@ postproc_config:
   spectral_method_name: "SPONGE-sym"
 
 
-  SSBM_kwargs:
-    n: 100000 # 100000
-    k: 100 # 100
-    pin: 0.1
-    gaussian_sigma: 0.1
-    etaout: 0.
-    etain: 0.3
-    values: 'gaussian'
+#  SSBM_kwargs:
+#    n: 100000 # 100000
+#    k: 100 # 100
+#    pin: 0.1
+#    gaussian_sigma: 0.1
+#    etaout: 0.
+#    etain: 0.3
+#    values: 'gaussian'
 
 
   # ------------------------------

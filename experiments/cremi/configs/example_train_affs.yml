@@ -68,6 +68,9 @@ loaders:
     # Configuration for the master dataset.
     master_config:
       # We might need order 0 interpolation if we have segmentation in there somewhere.
+#      crop_after_target:
+#        - [0, 10, 10]
+#        - [0, 10, 10]
       elastic_transform:
         apply: False
         alpha: 2000.
