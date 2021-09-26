@@ -42,6 +42,8 @@ class Segmentation2AffinitiesPluGliaAndBoundary(Segmentation2Affinities2or3D):
                  retain_segmentation=False, segmentation_to_binary=False,
                  map_to_foreground=True, learn_ignore_transitions=False,
                  **super_kwargs):
+        # FIXME: remove support for glia mask, no longer supported in affogato
+
         assert compute_affinities is not None,\
             "Couldn't find 'affogato' module, affinity calculation is not available"
         assert isinstance(offsets, (list, tuple)), "`offsets` must be a list or a tuple."
@@ -82,6 +84,9 @@ class Segmentation2AffinitiesPluGliaAndBoundary(Segmentation2Affinities2or3D):
             if not self.train_affs_on_glia and self.glia_label is not None:
                 glia_mask = (extra_masks == self.glia_label)
 
+
+        assert boundary_mask is None
+        assert glia_mask is None
         output, mask = compute_affinities(labels.astype('int64'), self.offsets,
                              ignore_label=self.ignore_label,
                              boundary_mask=boundary_mask,
