@@ -192,6 +192,17 @@ def writeHDF5(data, path, inner_path, compression='gzip'):
         f.create_dataset(inner_path, data=data, compression=compression)
 
 
+def writeHDF5attribute(attribute_data, attriribute_name, file_path, inner_path_dataset):
+    if os.path.exists(file_path):
+        write_mode = 'r+'
+    else:
+        write_mode = 'w'
+    with h5py.File(file_path, write_mode) as f:
+        assert inner_path_dataset in f, "Dataset not present in file"
+        dataset = f[inner_path_dataset]
+        dataset.attrs.create(attriribute_name, attribute_data)
+
+
 def get_hdf5_inner_paths(path, inner_path=None):
     with h5py.File(path, 'r') as f:
         if inner_path is None:
