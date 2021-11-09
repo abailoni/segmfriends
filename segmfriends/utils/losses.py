@@ -14,19 +14,24 @@ class LabelTargetSorensenDiceLoss2D(SorensenDiceLoss):
         nb_classes = input.shape[1]
 
         # Convert target to one-hot:
-        target.view(-1, 1)
+        target = target.view(-1, 1)
 
         target_onehot = torch.zeros_like(input)
         # TODO: generalize to 3D
-        target_onehot.permute(0, 2, 3, 1).view(-1, nb_classes)
+        target_onehot = target_onehot.permute(0, 2, 3, 1).reshape(-1, nb_classes)
 
         # Scatter:
-        target_onehot.scatter_(1, target, 1)
+        target_onehot = target_onehot.scatter_(1, target, 1)
 
         # Reshape back:
         # TODO: generalize to 3D
-        target_onehot.view(shape[0], shape[2], shape[3], nb_classes).permute(0,3,1,2)
-        print(target_onehot.shape)
+        target_onehot = target_onehot.reshape(shape[0], shape[2], shape[3], nb_classes).permute(0,3,1,2)
+        # print(target_onehot.shape)
+
+        # # FIXME: hack to quickly invert background prediction
+        # target_onehot[:,0] = 1 - target_onehot[:,0]
+        # # I also need to invert prediction, otherwise softmax does not work
+        # input[:,0] = 1 - input[:,0]
 
         return super(LabelTargetSorensenDiceLoss2D, self).forward(input, target_onehot)
 

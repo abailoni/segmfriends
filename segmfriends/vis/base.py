@@ -44,7 +44,7 @@ def plot_segm(target, segm, z_slice=0, background=None, mask_value=None, highlig
               alpha_labels=0.4, alpha_boundary=0.5, cmap=None):
     """Shape of expected background: (z,x,y)"""
     if background is not None:
-        target.matshow(background[z_slice], cmap='gray', interpolation=DEF_INTERP)
+        target.matshow(background[z_slice], cmap='gray')
 
     if mask_value is not None:
         segm = mask_the_mask(segm,value_to_mask=mask_value)

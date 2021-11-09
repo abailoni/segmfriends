@@ -94,7 +94,7 @@ class ReplicateTensorsInBatch(Transform):
 
 class From3Dto2Dtensors(Transform):
     """
-    Tensors are expected to be 4D (channel dim + spatial ones). Return 2D by checking that 3rd dimension can be compressed.
+    Tensors are expected to be 4D (channel dim + spatial ones) or 3D (only spatial dimensions). Return 2D by checking that 3rd dimension can be compressed.
     """
     def __init__(self,
                  **super_kwargs):
@@ -103,9 +103,13 @@ class From3Dto2Dtensors(Transform):
     def batch_function(self, batch):
         new_batch = [None for _ in range(len(batch))]
         for indx in range(len(batch)):
-            assert batch[indx].ndim == 4
-            assert batch[indx].shape[1] == 1
-            new_batch[indx] = batch[indx][:,0]
+            if batch[indx].ndim == 4:
+                assert batch[indx].shape[1] == 1
+                new_batch[indx] = batch[indx][:,0]
+            else:
+                assert batch[indx].ndim == 3
+                assert batch[indx].shape[0] == 1
+                new_batch[indx] = batch[indx][0]
         return new_batch
 
 

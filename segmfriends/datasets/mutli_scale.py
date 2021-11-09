@@ -25,7 +25,8 @@ from ..transform.affinities import affinity_config_to_transform, Segmentation2Af
 class MultiScaleDataset(Zip):
     def __init__(self, name, volume_config, slicing_config,
                  transform_config=None,
-                 inference_mode=False):
+                 inference_mode=False,
+                 convert_to_torch_tensor=True):
         assert isinstance(volume_config, dict)
         assert isinstance(slicing_config, dict)
         assert 'volume_keys_to_load' in volume_config
@@ -58,6 +59,7 @@ class MultiScaleDataset(Zip):
                          sync=True)
 
         # Set master config (for transforms)
+        self.convert_to_torch_tensor = convert_to_torch_tensor
         self.transform_config = {} if transform_config is None else deepcopy(transform_config)
         # Get transforms
         self.transforms = self.get_transforms()
@@ -109,7 +111,8 @@ class MultiScaleDataset(Zip):
             # computation being warped into the FOV.
             transforms.add(VolumeAsymmetricCrop(**crop_config))
 
-        transforms.add(AsTorchBatch(3))
+        if self.convert_to_torch_tensor:
+            transforms.add(AsTorchBatch(3))
 
         if self.transform_config.get('convert_batch_to_2D', False):
             transforms.add(From3Dto2Dtensors())
@@ -123,10 +126,57 @@ class MultiScaleDataset(Zip):
         slicing_config = config.get('slicing_config', {})
         transform_config = config.get('transform_config')
         inference_mode = config.get('inference_mode', False)
+        convert_to_torch_tensor = config.get('convert_to_torch_tensor', True)
         return cls(name, volume_config=volume_config,
                    slicing_config=slicing_config,
                    transform_config=transform_config,
-                   inference_mode=inference_mode)
+                   inference_mode=inference_mode,
+                   convert_to_torch_tensor=convert_to_torch_tensor)
+
+
+class MultiScaleDatasets(Concatenate):
+    # TODO: debug inference mode
+    def __init__(self, names,
+                 volume_config,
+                 slicing_config,
+                 transform_config,
+                 inference_mode=None):
+        # Make datasets and concatenate
+        # (Here we only convert the numpy array to tensors when they are combined in the transforms)
+        if names is None:
+            datasets = [MultiScaleDataset(name=None,
+                                     volume_config=volume_config,
+                                     slicing_config=slicing_config,
+                                     transform_config=transform_config,
+                                     inference_mode=inference_mode,
+                                        convert_to_torch_tensor=False)]
+        else:
+            datasets = [MultiScaleDataset(name=name,
+                                     volume_config=volume_config,
+                                     slicing_config=slicing_config,
+                                     transform_config=transform_config,
+                                     inference_mode=inference_mode,
+                                     convert_to_torch_tensor=False)
+                        for name in names]
+        super().__init__(*datasets)
+        final_dim = 2 if transform_config.get('convert_batch_to_2D', False) else 3
+        self.transforms = self.get_transforms(dimensionality=final_dim)
+
+    def get_transforms(self, dimensionality=3):
+        transforms = AsTorchBatch(dimensionality)
+        return transforms
+
+    @classmethod
+    def from_config(cls, config):
+        config = yaml2dict(config)
+        names = config.get('dataset_names')
+        volume_config = config.get('volume_config')
+        slicing_config = config.get('slicing_config')
+        transform_config = config.get('transform_config')
+        inference_mode = config.get('inference_mode', False)
+        return cls(names=names, volume_config=volume_config,
+                   transform_config=transform_config,
+                   slicing_config=slicing_config, inference_mode=inference_mode)
 
 
 def collate_indices(batch):
