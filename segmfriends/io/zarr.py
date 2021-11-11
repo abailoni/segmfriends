@@ -17,17 +17,19 @@ def load_array_from_zarr_group(z_path,
     assert inner_path in z_group, "Inner dataset {} not found in zarr group {}".format(inner_path, z_path)
 
     # Load dataset in memory:
-    dataset = z_group[inner_path][:]
+    dataset = z_group[inner_path]
     if z_slice is not None:
         # TODO: generalize
         assert isinstance(z_slice, int)
         dataset = dataset[z_slice]
+    else:
+        dataset = dataset[:]
 
     if apply_valid_mask:
         assert valid_mask_name in z_group
         # TODO: generalize
         assert z_slice is not None
-        original_image_shape = tuple(z_group[valid_mask_name][:][z_slice])
+        original_image_shape = tuple(z_group[valid_mask_name][z_slice][:])
         original_crop = tuple(slice(shp) for shp in original_image_shape)
         dataset = dataset[original_crop]
 
@@ -124,3 +126,17 @@ def append_arrays_to_zarr(z_path,
 
                 if add_array_dimensions:
                     z_group[key].attrs['_ARRAY_DIMENSIONS'] = ["z", "y", "x"]
+
+
+def add_dataset_to_zarr_group(z_path, data, inner_path, add_array_dimensions=False):
+    z_group = zarr.open(z_path, mode="w+")
+
+    # Remove data if it exists already:
+    if inner_path in z_group:
+        shutil.rmtree(os.path.join(z_path, inner_path))
+
+    # Save the data to disk:
+    z_group.create_dataset(inner_path, data=data, shape=data.shape)
+
+    if add_array_dimensions:
+        z_group[inner_path].attrs['_ARRAY_DIMENSIONS'] = ["z", "y", "x"]
