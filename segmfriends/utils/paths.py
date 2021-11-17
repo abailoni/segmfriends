@@ -7,6 +7,8 @@ try:
     import pathutils
 except ImportError:
     pathutils = None
+except ValueError:
+    pathutils = None
 
 
 def change_paths_config_file(template_path, path_keys, path_values):
@@ -28,9 +30,26 @@ def change_paths_config_file(template_path, path_keys, path_values):
 
     return output_path
 
+def get_vars_from_argv_and_pop(argv, **vars):
+    # Collect values:
+    collected_values = {}
+    for i, var in enumerate(vars):
+        var_argv = "--{}".format(var)
+        if var_argv in argv:
+            idx = argv.index(var_argv)
+            value = argv.pop(idx + 1)
+            argv.pop(idx)
+        else:
+            assert vars[var] is not None, "Argument {} not found in argv and no default values were passed.".format(var)
+            value = vars[var]
+        collected_values[var] = value
+
+    return collected_values, argv
+
 
 
 def get_vars_from_argv(argv, vars=("DATA_HOME", "LOCAL_DRIVE")):
+    # TODO: Deprecated. Use get_vars_from_argv_and_pop instead
     def fix_path(path):
         return path if path.endswith('/') else path + '/'
 
