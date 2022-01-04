@@ -1,6 +1,6 @@
 package:
   name: segmfriends
-  version: {{ GIT_DESCRIBE_TAG }}
+  version: '0.0.10'
 
 source:
   path: ..
@@ -11,16 +11,27 @@ build:
 
 requirements:
   build:
-    - python
+    - python {{ python }}
     - pip
     - cython
     - numpy
 
   run:
-    - python
-    - gasp
+    - python {{ python }}
+    - nifty
+    - vigra
+    - affogato
+#    - elf # Not ready yet for Mac
     - h5py
-    - matplotlib
+    - pyyaml
+    - scipy
+    - pillow
+    - munkres
+    - scikit-learn
+    - scikit-image
+    - dill
+    - opencv
+    - tifffile
 
 test:
   requires:

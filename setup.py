@@ -8,11 +8,6 @@ exec(open('segmfriends/__version__.py').read())
 
 
 extensions = [
-    Extension("segmfriends.features.mappings_CY", ["./segmfriends/features/mappings_CY.pyx"],
-        include_dirs=[numpy.get_include()],
-        # libraries=[...],
-        # library_dirs=[...],
-              ),
     Extension("segmfriends.transform.combine_segms_CY", ["./segmfriends/transform/combine_segms_CY.pyx"],
         include_dirs=[numpy.get_include()]),
 ]
@@ -26,7 +21,6 @@ setup(
     author='Alberto Bailoni',
     url='https://github.com/abailoni/segmfriends',
     long_description='',
-    author_email='alberto.bailoni@iwr.uni-heidelberg.de',
     ext_modules = cythonize(extensions),
     # include_dirs=[numpy.get_include()]
 )
