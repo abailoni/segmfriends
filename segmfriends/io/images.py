@@ -24,3 +24,33 @@ def write_image_to_file(path, array):
         cv2.imwrite(path, array)
     else:
         raise ValueError("Only png and tif extensions supported")
+
+def read_uint8_img(img_path, add_all_channels_if_needed=True):
+    # TODO: rename and move to io module together with function exporting segmentation file
+    assert os.path.isfile(img_path), "Image {} not found".format(img_path)
+
+    extension = os.path.splitext(img_path)[1]
+    if extension == ".tif" or extension == ".tiff":
+        # img = cv2.imread(img_path)
+        img = cv2.imread(img_path, cv2.IMREAD_ANYDEPTH)
+        # print(img.dtype, img.min(), img.max())
+        # Sometimes some images are loaded in float and cannot be automatically converted to uint8:
+        # FIXME: check type and then convert to uint8 (or uint16??)
+        if img.dtype == 'uint16':
+            img = cv2.convertScaleAbs(img, alpha=(255.0/65535.0))
+        assert img.dtype == 'uint8'
+            # # img = cv2.imread(img_path, cv2.IMREAD_ANYDEPTH)
+        print(img.dtype, img.min(), img.max())
+            # img = img - img.min()
+            # img = (img / img.max() * 255.).astype('uint8')
+    elif extension == ".png":
+        img = imageio.imread(img_path)
+    else:
+        raise ValueError("Extension {} not supported".format(extension))
+    if len(img.shape) == 2 and add_all_channels_if_needed:
+        # Add channel dimension:
+        img = np.stack([img for _ in range(3)])
+        img = np.rollaxis(img, axis=0, start=3)
+    # assert len(img.shape) == 3 and img.shape[2] == 3, img.shape
+
+    return img
