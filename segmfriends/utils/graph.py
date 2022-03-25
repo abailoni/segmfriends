@@ -2,7 +2,7 @@ import time
 import nifty
 import numpy as np
 from nifty import graph as ngraph
-from nifty.graph import undirectedLongRangeGridGraph
+# from nifty.graph import undirectedLongRangeGridGraph
 import warnings
 
 def convert_graph_to_metis_format(graph, edge_weights, path_output_file):

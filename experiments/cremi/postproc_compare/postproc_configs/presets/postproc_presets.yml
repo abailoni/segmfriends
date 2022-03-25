@@ -31,6 +31,15 @@ MEAN:
           linkage_criteria: 'mean'
           add_cannot_link_constraints: False
 
+MEDIAN:
+  parent_model: ['GASP']
+  postproc:
+    GASP_kwargs:
+        run_GASP_kwargs:
+          linkage_criteria: 'quantile'
+          add_cannot_link_constraints: False
+
+
 MAX:
   parent_model: ['GASP']
   postproc:

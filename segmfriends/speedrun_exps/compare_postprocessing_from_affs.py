@@ -1,13 +1,13 @@
 from segmfriends.utils import writeHDF5
 
 from GASP.utils.various import find_indices_direct_neighbors_in_offsets
-from segmfriends.utils.paths import get_vars_from_argv, change_paths_config_file
+from segmfriends.utils.paths import get_vars_from_argv, change_paths_config_file, get_vars_from_argv_and_pop
 from segmfriends.utils.opensimplex_noise import add_opensimplex_noise_to_affs
 from segmfriends.features import map_features_to_label_array
 from segmfriends.utils.cremi_utils import prepare_submission
 import warnings
 
-from speedrun import BaseExperiment
+from speedrun import BaseExperiment, process_speedrun_sys_argv
 
 from copy import deepcopy
 
@@ -43,7 +43,7 @@ class PostProcessingExperiment(BaseExperiment):
         if config is not None:
             self.read_config_file(config)
 
-        self.auto_setup()
+        self.auto_setup(update_git_revision=False)
 
         # Where the segmentation will be saved: (each experiment is in a sub-folder)
         main_output_dir = self.get('main_output_dir', ensure_exists=True)
@@ -547,16 +547,20 @@ class PostProcessingExperiment(BaseExperiment):
                         GT = GT[sub_crop_slc[1:]]
                         GT = vigra.analysis.labelVolumeWithBackground(GT.astype('uint32'))
 
+                        # --------------------------------
+
                         # Add some more white noise to the affinities, which is usually beneficial
                         # to break ties with sigmoid outputs
                         affinities = affinities.astype("float64")
-                        # while True:
-                        print("Adding some white noise to affinities...")
-                        affinities += np.random.normal(scale=1e-4, size=affinities.shape)
-                        # KEEP IN MIND: if instead of clipping I renormalize by setting max 1 and min 0, I could end up
-                        # shifting all weights!!
-                        # Better: clipping
-                        affinities = np.clip(affinities, 0., 1.)
+                        # # while True:
+                        # print("Adding some white noise to affinities...")
+                        # affinities += np.random.normal(scale=1e-4, size=affinities.shape)
+                        # # KEEP IN MIND: if instead of clipping I renormalize by setting max 1 and min 0, I could end up
+                        # # shifting all weights!!
+                        # # Better: clipping
+                        # affinities = np.clip(affinities, 0., 1.)
+
+                        # --------------------------------
 
                         # affinities -= np.minimum(affinities.min(), 0.)
                         # affinities /= np.maximum(affinities.max(), 1.)
@@ -643,32 +647,9 @@ class PostProcessingExperiment(BaseExperiment):
 
 
 if __name__ == '__main__':
-    print(sys.argv[1])
-
     source_path = os.path.dirname(os.path.realpath(__file__))
-    config_path = os.path.join(source_path, '../../experiments/cremi/postproc_compare/postproc_configs')
-    experiments_path = os.path.join(source_path, 'runs')
-
-    path_types = ["DATA_HOME", "LOCAL_DRIVE"]
-    collected_paths, sys.argv = get_vars_from_argv(sys.argv, vars=path_types)
-
-    sys.argv[1] = os.path.join(experiments_path, sys.argv[1])
-    if '--inherit' in sys.argv:
-        i = sys.argv.index('--inherit') + 1
-        if sys.argv[i].endswith(('.yml', '.yaml')):
-            sys.argv[i] = change_paths_config_file(os.path.join(config_path, sys.argv[i]), path_types, collected_paths)
-        else:
-            sys.argv[i] = os.path.join(experiments_path, sys.argv[i])
-    if '--update' in sys.argv:
-        i = sys.argv.index('--update') + 1
-        sys.argv[i] = change_paths_config_file(os.path.join(config_path, sys.argv[i]), path_types, collected_paths)
-    i = 0
-    while True:
-        if f'--update{i}' in sys.argv:
-            ind = sys.argv.index(f'--update{i}') + 1
-            sys.argv[ind] = change_paths_config_file(os.path.join(config_path, sys.argv[ind]), path_types, collected_paths)
-            i += 1
-        else:
-            break
+    sys.argv = process_speedrun_sys_argv(sys.argv, source_path,
+                                         default_config_dir_path="../../experiments/cremi/postproc_compare/postproc_configs",
+                                         default_exp_dir_path="/scratch/bailoni/projects/gasp/")
     cls = PostProcessingExperiment
     cls().run()

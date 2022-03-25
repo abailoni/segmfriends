@@ -1,4 +1,4 @@
-experiment_name: subcrop_train_samples_SP_LR0_full
+experiment_name: train_samples_SP_5
 
 
 postproc_config:
@@ -6,13 +6,16 @@ postproc_config:
   from_superpixels: True
 #  save_superpixel_segmentation: True
   restrict_to_GT_bbox: False
+  overwrite_prev_files: True
 
   nb_thread_pools: 1
+  nb_iterations: 1
 
   iterated_options:
 #    preset: ["MEAN", "Mutex", "MEANconstr", "MAXconstr", "MIN", "MAX", "SUMnoLogs", "SUMconstrNoLogs"] # Presets to be found in the presets folder
     preset:
-#      - "MEAN"
+      - "MEAN"
+      - "MEDIAN"
 #      - "MEANconstr"
 #      - "SUM"
 #      - "SUMconstr"
@@ -20,18 +23,17 @@ postproc_config:
 #      - "MAX"
 #      - "MAXconstr"
 #      - "MIN"
-      - "MINconstr"
+#      - "MINconstr"
     #    preset: ["SUMnoLogs", "SUMconstrNoLogs", "SUM", "SUMconstr"] # Presets to be found in the presets folder
 #    preset: ["SUM", "SUMconstr"] # Presets to be found in the presets folder
 #    preset: ["MINconstr"] # Presets to be found in the presets folder
-    # TODO: The following options modify things at loading time, so they need to be handled specifically:
-#    sample: [ "A"]
+    sample: ["A"] # FIXME: specify manually
 #    sample: ["B", "A", "C"]
     edge_prob: 0.
     noise_factor: 0.
     crop_slice:
 #    ":,:,:,:"
-      A: ":, :,:,:"
+      A: ":, :,:,:" #FIXME: remove 10 slice
       B: ":, :, 90:, 580: 1900"
       C: ":, :, 70:1450, 95:1425"
 #    sub_crop_slice: ":,:, 200:300, 200:300"

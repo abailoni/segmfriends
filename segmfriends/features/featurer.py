@@ -4,7 +4,7 @@ import numpy as np
 from nifty.graph import rag as nrag
 
 from ..features import accumulate_affinities_on_graph_edges
-from ..utils.graph import build_lifted_graph_from_rag
+from elf.segmentation.gasp_utils import build_lifted_graph_from_rag
 
 
 def get_rag(segmentation, nb_threads):

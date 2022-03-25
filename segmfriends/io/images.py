@@ -32,15 +32,16 @@ def read_uint8_img(img_path, add_all_channels_if_needed=True):
     extension = os.path.splitext(img_path)[1]
     if extension == ".tif" or extension == ".tiff":
         # img = cv2.imread(img_path)
-        img = cv2.imread(img_path, cv2.IMREAD_ANYDEPTH)
+        img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
         # print(img.dtype, img.min(), img.max())
         # Sometimes some images are loaded in float and cannot be automatically converted to uint8:
         # FIXME: check type and then convert to uint8 (or uint16??)
+        # if img.dtype != 'uint8':
+        #     print("Warning, image {} has type {} and it was converted to uint8".format(os.path.split(img_path)[1], img.dtype))
         if img.dtype == 'uint16':
             img = cv2.convertScaleAbs(img, alpha=(255.0/65535.0))
         assert img.dtype == 'uint8'
             # # img = cv2.imread(img_path, cv2.IMREAD_ANYDEPTH)
-        print(img.dtype, img.min(), img.max())
             # img = img - img.min()
             # img = (img / img.max() * 255.).astype('uint8')
     elif extension == ".png":

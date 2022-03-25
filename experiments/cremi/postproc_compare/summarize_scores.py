@@ -1,8 +1,6 @@
 import os
 from copy import deepcopy
 
-# TODO: get rid of paths
-from pathutils import get_trendytukan_drive_dir
 
 from segmfriends.utils.config_utils import assign_color_to_table_value, return_recursive_key_in_dict
 import json
@@ -13,10 +11,11 @@ from segmfriends.utils.config_utils import collect_score_configs
 # Script options:
 # -----------------------
 
-project_dir = os.path.join(get_trendytukan_drive_dir(), "projects/new_agglo_compare")
+project_dir = "/scratch/bailoni/projects/gasp/"
 
 EXP_NAMES = [
-    "subcrop_train_samples_SP_LR0_full_PAPER",
+    # "train_samples_LR01_pixels",
+    "train_samples_SP_3"
 ]
 
 REQUIRED_STRINGS = [
@@ -36,9 +35,9 @@ EXCLUDE_STRINGS = [
 INCLUDE_STRINGS = [
 ]
 
-POSTFIX_FILE = "_latex"
+POSTFIX_FILE = "_average"
 
-LATEX_OUTPUT = True
+LATEX_OUTPUT = False
 
 # Index of the sorting column (ignoring the first columns given by exp-name and name of the score file
 sorting_column_idx = 0
@@ -58,9 +57,9 @@ keys_to_collect = [
     # (['postproc_config', 'crop'], 'string'),
     # (['postproc_config', 'presets_collected'], 'string'),
     # (['score_WS', 'cremi-score'], 'f', 3),
-    (['score_WS', 'adapted-rand'], 'f', 4),
-    (['score_WS', 'vi-split'], 'f', 3),
-    (['score_WS', 'vi-merge'], 'f', 3),
+    (['score', 'adapted-rand'], 'f', 4),
+    (['score', 'vi-split'], 'f', 3),
+    (['score', 'vi-merge'], 'f', 3),
     # (['run_GASP_runtime'], 'f', 1),
     (['full_GASP_pipeline_runtime'], 'f', 0),
     # (['multicut_energy'], 'f', 0),
@@ -109,10 +108,10 @@ for exp_name in EXP_NAMES:
         organize_configs_by=(
             # ('postproc_config', 'sample'),
             ('postproc_config', 'presets_collected'),
-                              ('postproc_config', 'nb_nodes')
+                              # ('postproc_config', 'nb_nodes')
                              ),
         # files_to_be_exlcuded=["MINconstr"]
-        restrict_files_to=['MINconstr']
+        # restrict_files_to=['MINconstr']
     )
 
     # results_collected = results_collected["C"]

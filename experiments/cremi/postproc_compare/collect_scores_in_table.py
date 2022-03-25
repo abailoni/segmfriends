@@ -1,8 +1,6 @@
 import os
 from copy import deepcopy
 
-# TODO: get rid of paths
-from pathutils import get_trendytukan_drive_dir
 
 from segmfriends.utils.config_utils import assign_color_to_table_value, return_recursive_key_in_dict
 import json
@@ -12,10 +10,10 @@ from segmfriends.utils.various import yaml2dict
 # Script options:
 # -----------------------
 
-project_dir = os.path.join(get_trendytukan_drive_dir(), "projects/new_agglo_compare")
+project_dir = "/scratch/bailoni/projects/gasp/"
 
 EXP_NAMES = [
-    "subcrop_train_samples_LR1",
+    "train_samples_LR01_pixels",
 ]
 
 REQUIRED_STRINGS = [
@@ -35,7 +33,7 @@ EXCLUDE_STRINGS = [
 INCLUDE_STRINGS = [
 ]
 
-POSTFIX_FILE = "_MEAN_and_MWS"
+POSTFIX_FILE = "_MEAN_and_MEDIAN"
 
 LATEX_OUTPUT = False
 

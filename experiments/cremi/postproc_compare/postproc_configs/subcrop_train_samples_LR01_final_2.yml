@@ -1,25 +1,27 @@
-experiment_name: subcrop_train_samples_LR01_final_3
+experiment_name: train_samples_LR01_pixels
 
 postproc_config:
 #  TODO: name, preset
   from_superpixels: False
 
-  nb_thread_pools: 3
+  nb_thread_pools: 4
   restrict_to_GT_bbox: True
+
 
   iterated_options:
 #    preset: ["MEAN", "MEANconstr", "SUM", "SUMconstr", "Mutex"] # Presets to be found in the presets folder
 #    preset: ["MutexPixGrid", "MEAN"] # Presets to be found in the presets folder
     preset:
-#      - "MEAN"
+      - "MEAN"
+      - "MEDIAN"
 #      - "MEANconstr"
 #      - "SUM"
 #      - "SUMconstr"
 #      - "MutexPixGrid"
-      - "MAX"
-      - "MAXconstr"
-      - "MIN"
-      - "MINconstr"
+#      - "MAX"
+#      - "MAXconstr"
+#      - "MIN"
+#      - "MINconstr"
 #    sample: [ "A"]
     sample: ["B", "A", "C"]
     edge_prob: 0.1
