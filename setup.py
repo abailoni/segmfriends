@@ -1,4 +1,4 @@
-from setuptools import setup
+import setuptools
 from distutils.extension import Extension
 # from Cython.Build import cythonize
 import numpy
@@ -7,20 +7,17 @@ import numpy
 exec(open('segmfriends/__version__.py').read())
 
 
-# extensions = [
-#     Extension("segmfriends.transform.combine_segms_CY", ["./segmfriends/transform/combine_segms_CY.pyx"],
-#         include_dirs=[numpy.get_include()]),
-# ]
 
 
-setup(
-    name='Segmentation friends',
+setuptools.setup(
+    name='segmfriends',
     version=__version__,
-    packages=['segmfriends', ],
     description='Some segmentation tools',
     author='Alberto Bailoni',
     url='https://github.com/abailoni/segmfriends',
     long_description='',
     # ext_modules = cythonize(extensions),
     # include_dirs=[numpy.get_include()]
+    packages=setuptools.find_packages(),
+    # packages=['segmfriends', ],
 )
